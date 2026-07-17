@@ -6,3 +6,6 @@ def fit_normalize(
  minPercValid: float = 0.05, # Minimum % of valid non-zero data for a column
 ):
     return Exception("fit_normalize function is not implemented yet.")
+
+
+print("Questo è un test per il branching e il commit di un file modificato.")
