@@ -12,13 +12,13 @@ def fit_normalize(
   return params, target
 
 def ReadCSV(input_csv: str):
-    return Exception("ReadCSV function is not implemented yet.")
+    raise Exception("ReadCSV function is not implemented yet.")
 
 def SeparateTarget(csv, target_column: str):
-    return Exception("SeparateTarget function is not implemented yet.")
+    raise Exception("SeparateTarget function is not implemented yet.")
 
 def RemoveNullOrLowVarianceColumns(params, minPercValid: float):    
-    return Exception("RemoveNullOrLowVarianceColumns function is not implemented yet.")
+    raise Exception("RemoveNullOrLowVarianceColumns function is not implemented yet.")
 
 def NormalizeColumns(params):
-    return Exception("NormalizeColumns function is not implemented yet.")
+    raise Exception("NormalizeColumns function is not implemented yet.")
