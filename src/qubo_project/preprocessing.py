@@ -5,7 +5,20 @@ def fit_normalize(
  outInitalRes_json: str, # Name of output statistics and data file
  minPercValid: float = 0.05, # Minimum % of valid non-zero data for a column
 ):
-    return Exception("fit_normalize function is not implemented yet.")
+  csv = ReadCSV(input_csv)
+  params,target = SeparateTarget(csv,target_column)
+  params = RemoveNullOrLowVarianceColumns(params,minPercValid)
+  params = NormalizeColumns(params)
+  return params, target
 
+def ReadCSV(input_csv: str):
+    return Exception("ReadCSV function is not implemented yet.")
 
-print("Questo è un test per il branching e il commit di un file modificato.")
+def SeparateTarget(csv, target_column: str):
+    return Exception("SeparateTarget function is not implemented yet.")
+
+def RemoveNullOrLowVarianceColumns(params, minPercValid: float):    
+    return Exception("RemoveNullOrLowVarianceColumns function is not implemented yet.")
+
+def NormalizeColumns(params):
+    return Exception("NormalizeColumns function is not implemented yet.")
