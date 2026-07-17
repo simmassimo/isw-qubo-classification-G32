@@ -12,12 +12,12 @@
 
 schema_version: "1.0"
 
-group_id: "GXX"
-repository_url: "https://github.com/..."
+group_id: "G32"
+repository_url: "https://github.com/simmassimo/isw-qubo-classification-G32.git"
 submission_date: "YYYY-MM-DD"
 
 students:
-  - student_id: "60/61/XXXXX"        #Matricola completa
+  - student_id: "60/61/65985"        #Matricola completa
     role_in_project:
       - "preprocessing"
       - "feature_selection"
@@ -25,7 +25,7 @@ students:
       - "testing"
       - "documentation"
       - "gui"
-  - student_id: "60/61/XXXXX"        #Matricola completa
+  - student_id: "60/61/65904"        #Matricola completa
     role_in_project:
       - "preprocessing"
       - "feature_selection"
@@ -47,7 +47,7 @@ team_work:
     # valori suggeriti: "pair_programming", "divisione_per_moduli", "mista"
     type: null
     notes: null
-    remote_collaboration_perc: 0   # Percentuale di lavoro in call (0-100)
+    remote_collaboration_perc: 100   # Percentuale di lavoro in call (0-100)
   estimated_total_hours:
     student_1_hours: null
     student_2_hours: null
@@ -56,22 +56,22 @@ team_work:
 initial_context:
   prior_experience:
     # valori da usare: "none", "basic", "intermediate", "advanced"
-    python: null
-    pandas_numpy: null
-    scikit_learn: null
-    machine_learning: null
-    classification: null
-    feature_selection: null
-    optimization: null
-    QUBO: null
-    git_github: null
+    python: intermediate
+    pandas_numpy: none
+    scikit_learn: none
+    machine_learning: basic
+    classification: none
+    feature_selection: none
+    optimization: basic
+    QUBO: none
+    git_github: basic
   initial_confidence:
     # scala 1-5: 1 = per nulla sicuri, 5 = molto sicuri
-    python_project_development: null
-    qubo_formulation: null
-    machine_learning: null
-    debugging: null
-    validating_llm_outputs: null
+    python_project_development: 3
+    qubo_formulation: 1
+    machine_learning: 2
+    debugging: 3
+    validating_llm_outputs: 1
 
 design_choices:
   correlation_computation: null

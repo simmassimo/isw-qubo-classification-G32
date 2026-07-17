@@ -13,15 +13,15 @@ The same day must not be covered by more than one interaction log. If you feel t
 ## Metadata
 
 ```yaml
-group_id: "GXX"
-repository_url: "https://github.com/..."
+group_id: "G32"
+repository_url: "https://github.com/simmassimo/isw-qubo-classification-G32.git"
 students:
-  - matricola: "60/61/XXXXX"
-    name: "Student 1"
-  - matricola: "60/61/XXXXX"
-    name: "Student 2"
+  - matricola: "60/61/65985"
+    name: "Simone Massenti"
+  - matricola: "60/61/65904"
+    name: "Alexandra Brelstaff"
 last_update: "YYYY-MM-DD"
-log_id: "GXX-NN"
+log_id: "G32-NN"
 ```
 
 ---
@@ -35,7 +35,7 @@ log_id: "GXX-NN"
 ### 1. LLM and chat information
 
 ```yaml
-llm_name: "ChatGPT / Claude / Gemini / Copilot / Cursor / DeepSeek / Other"
+llm_name: "Copilot"
 llm_version_or_model: "e.g. GPT-5, Claude Sonnet 4.5, Gemini 2.5 Pro"
 chat_name_or_identifier: "Short name or identifier of the active chat"
 interaction_mode: "web_chat / IDE_assistant / API / desktop_app / other"
