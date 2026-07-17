@@ -8,11 +8,22 @@ def ReadCSV(input_csv: str):
 def SeparateTarget(csv, target_column: str):
     return np.array([row for row in csv[1:]]), np.array([row[csv[0].index(target_column)] for row in csv[1:]])
 
+def AlmostZero(x, tol=1e-4):
+    return abs(x) < tol
+
+def NonAlmostZero(x, tol=1e-4):
+    return not AlmostZero(x, tol)
+
+def CountNonAlmostZero(arr, tol=1e-4):
+    return sum(1 for x in arr if NonAlmostZero(x, tol))
+
 def RemoveNullOrLowVarianceColumns(params, minPercValid: float):    
     # rotate the params to work with columns
     params_rotated = np.rot90(params)
     # Filter out columns with too many null or low variance values
-    filtered_params = [col for col in params_rotated if np.count_nonzero(col) / len(col) >= minPercValid]
+    filtered_params = [
+        col for col in params_rotated 
+        if CountNonAlmostZero(col) / len(col) >= minPercValid]
     # Rotate back
     return np.rot90(filtered_params, k=-1)
 
