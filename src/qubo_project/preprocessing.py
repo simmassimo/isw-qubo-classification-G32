@@ -65,6 +65,14 @@ def WriteCSV(normalized_csv: str, params, target):
     except Exception as e:
         print(f"Error writing to CSV: {e}")
 
+def WriteJSON(outInitalRes_json: str, json_stats):
+    try:
+        with open(outInitalRes_json, 'w') as f:
+            import json
+            json.dump(json_stats, f, indent=4)
+    except Exception as e:
+        print(f"Error writing to JSON: {e}")
+
 def fit_normalize(
  input_csv: str, # Input dataset name
  target_column: str, # column name of target
@@ -91,6 +99,7 @@ def fit_normalize(
     tnow = time.time()
     json_stats["dataset_processing_time"] = round(tnow - t,2)
     WriteCSV(normalized_csv, params, target)
+    WriteJSON(outInitalRes_json, json_stats)
     return params, target, json_stats
 
 
