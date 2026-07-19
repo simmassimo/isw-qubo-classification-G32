@@ -1,4 +1,5 @@
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import numpy as np
 from preprocessing import ReadCSV, SeparateTarget
 import joblib
@@ -66,3 +67,31 @@ def predict(
 
     # Make predictions
     y_pred = clf.predict(x_test.astype(float))
+
+    # Save classification statistics
+    json_stats = {
+        "classifier": clf.__class__.__name__,
+        "n_samples": x_test.shape[0],
+        "target_1_count": int(np.sum(y_test)),
+        "target_1_percentage": np.mean(y_test) * 100,
+        "class_0": {
+            "precision": precision_score(y_test, y_pred, pos_label=0),
+            "recall": recall_score(y_test, y_pred, pos_label=0),
+            "f1_score": f1_score(y_test, y_pred, pos_label=0),
+            "support": int(np.sum(y_test == 0)),
+        },
+        "class_1": {
+            "precision": precision_score(y_test, y_pred, pos_label=1),
+            "recall": recall_score(y_test, y_pred, pos_label=1),
+            "f1_score": f1_score(y_test, y_pred, pos_label=1),
+            "support": int(np.sum(y_test == 1)),
+        },
+        "roc_auc": roc_auc_score(y_test, y_pred),
+        "confusion_matrix": {
+            "labels": [0, 1],
+            "matrix": confusion_matrix(y_test, y_pred).tolist(),
+        }
+    }
+
+    with open(classif_stats_json, 'w') as f:
+        json.dump(json_stats, f, indent=4)
