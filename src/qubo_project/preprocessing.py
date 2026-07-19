@@ -59,9 +59,8 @@ def NormalizeColumns(params):
 def WriteCSV(normalized_csv: str, params, target):
     try:
         with open(normalized_csv, 'w') as f:
-            for row in params:
-                f.write(','.join(map(str, row)) + '\n')
-            f.write(','.join(map(str, target)) + '\n')
+            for row, t in zip(params, target):
+                f.write(','.join(map(str, row)) + ',' + str(t) + '\n')
     except Exception as e:
         print(f"Error writing to CSV: {e}")
 
