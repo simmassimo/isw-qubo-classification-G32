@@ -10,10 +10,12 @@ def train(
  metrics_json: str, # file with training statistics
  seed: int = 42,
 ):
+    classifier = classifier.lower().strip()
     # open the csv file and read the data
-    csv,_,_ = ReadCSV(reducedTrain_csv)
+    csv = ReadCSV(reducedTrain_csv)
+    
 
-    if classifier == "random_forest":
+    if classifier in ["random_forest", "rf", "randomforest", "random forest"]:
         clf = RandomForestClassifier(n_estimators=100, random_state=seed)
     else:
         raise ValueError("Unsupported classifier type")
