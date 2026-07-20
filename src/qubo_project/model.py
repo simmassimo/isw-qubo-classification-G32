@@ -95,3 +95,8 @@ def predict(
 
     with open(classif_stats_json, 'w') as f:
         json.dump(json_stats, f, indent=4)
+
+    with open(predictions_csv, 'w') as f:
+        f.write(','.join(map(str, x_headers)) + ',prediction\n')
+        for i in range(len(y_pred)):
+            f.write(','.join(map(str, x_test[i])) + f',{y_pred[i]}\n')
