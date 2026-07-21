@@ -1,5 +1,5 @@
 import pytest
-from src import train, predict
+from qubo_project.model import train, predict
 import pandas as pd
 import os
 
@@ -14,10 +14,13 @@ def test_model_file_is_created():
     #remove file if exists
     if os.path.exists("../data/trial_model.pkl"):
         os.remove("../data/trial_model.pkl")
+    #grab a random column from the dataset to use as target
+    target_column = df.columns[-1].strip()  # Select the last column as target
+
     train(
         "random_forest",
         "../data/sample.csv",
-        "target",
+        target_column,
         "../data/trial_model.pkl",
         "../data/trial_metrics.json")
     assert os.path.exists("../data/trial_model.pkl"), "Model file was not created."
@@ -31,7 +34,7 @@ def test_predictions_file_is_created():
         train(
             "random_forest",
             "../data/sample.csv",
-            "target",
+            target_column,
             "../data/trial_model.pkl",
             "../data/trial_metrics.json")
     predict(
