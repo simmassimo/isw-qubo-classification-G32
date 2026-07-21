@@ -5,6 +5,7 @@ from .preprocessing import ReadCSV, SeparateTarget
 import joblib
 import time
 import json
+import argparse
 
 def PrepareData(csv_file: str, target_column: str):
     t = time.time()
@@ -101,3 +102,41 @@ def predict(
         f.write(','.join(map(str, x_headers)) + ',prediction\n')
         for i in range(len(y_pred)):
             f.write(','.join(map(str, x_test[i])) + f',{y_pred[i]}\n')
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    sub_train = subparsers.add_parser("train", help="Train a classifier")
+    sub_train.add_argument("--classifier", type=str, required=True, help="Type of classifier to use (e.g., 'random_forest')")
+    sub_train.add_argument("--in-reduced", type=str, required=True, help="Path to the training dataset CSV file")
+    sub_train.add_argument("--target_column", type=str, required=True, help="Name of the target column in the dataset")
+    sub_train.add_argument("--out-model", type=str, required=True, help="Path to save/load the trained classifier")
+    sub_train.add_argument("--out-metrics", type=str, required=True, help="Path to save training statistics JSON file")
+
+    sub_predict = subparsers.add_parser("predict", help="Make predictions using a trained classifier")
+    sub_predict.add_argument("--input-testset", type=str, required=True, help="Path to the test dataset CSV file")
+    sub_predict.add_argument("--target", type=str, required=True, help="Name of the target column in the dataset")
+    sub_predict.add_argument("--model", type=str, required=True, help="Path to load the trained classifier")
+    sub_predict.add_argument("--out-predictions", type=str, required=True, help="Path to save predictions CSV file")
+    sub_predict.add_argument("--out-stats", type=str, required=True, help="Path to save classification statistics JSON file")
+
+    args = parser.parse_args()
+
+    if args.command == "train":
+        train(
+            classifier=args.classifier,
+            reducedTrain_csv=args.in_reduced,
+            target_column=args.target_column,
+            model_path=args.out_model,
+            metrics_json=args.out_metrics
+        )
+    elif args.command == "predict":
+        predict(
+            reduced_Test_csv=args.input_testset,
+            target_column=args.target,
+            model_path=args.model,
+            predictions_csv=args.out_predictions,
+            classif_stats_json=args.out_stats
+        )
