@@ -1,7 +1,7 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import numpy as np
-from ..preprocessing import ReadCSV, SeparateTarget
+from .preprocessing import ReadCSV, SeparateTarget
 import joblib
 import time
 import json
@@ -13,7 +13,7 @@ def PrepareData(csv_file: str, target_column: str):
     x_data, y_data = SeparateTarget(csv, target_column)
     x_headers = x_data[0, :]  # Save header row
     x_data = x_data[1:, :].astype(float)  # Exclude header row and convert to float
-    y_data = y_data[1:, :].astype(float)  # Exclude header row and convert to float
+    y_data = y_data[1:].astype(float)  # Exclude header row and convert to float
     return x_data, y_data, x_headers, tnow - t
 
 def train(
@@ -29,7 +29,7 @@ def train(
     if x_train is None or y_train is None:
         raise ValueError("Training data could not be prepared. Check the input CSV and target column.")
     if classifier in ["random_forest", "rf", "randomforest", "random forest"]:
-        json_stats["classifier"] = "random_forest"
+        classifier = "random_forest"
         clf = RandomForestClassifier(n_estimators=100, random_state=seed)
     else:
         raise ValueError("Unsupported classifier type")
@@ -39,6 +39,7 @@ def train(
     # Saving classifier using joblib
     joblib.dump(clf, f'{model_path}')
     json_stats = {
+        "classifier": classifier,
         "seed": seed,
         "model_path": model_path,
         "training_dataset": reducedTrain_csv,
