@@ -6,12 +6,10 @@ def ReadCSV(input_csv: str):
         with open(input_csv, 'r') as f:
             csv = [line.strip().split(',') for line in f.readlines()]
         csv = np.array(csv)
-        size = csv.shape[0]
-        n_ftrs_raw = csv.shape[1] - 1  # Exclude target column
-        return csv, size, n_ftrs_raw
+        return csv
     except Exception as e:
         print(f"Error reading CSV: {e}")
-        return [], 0, 0
+        return []
 
 def SeparateTarget(csv, target_column: str):
     headers = csv[0]
@@ -83,7 +81,9 @@ def fit_normalize(
 ):
     json_stats = {}
     t = time.time()
-    csv, size, n_ftrs_raw = ReadCSV(input_csv)
+    csv = ReadCSV(input_csv)
+    size = csv.shape[0]
+    n_ftrs_raw = csv.shape[1] - 1  # Exclude target column
     tnow = time.time()
     json_stats["dataset_input_time"] = round(tnow - t,2)
     json_stats["dataset_size"] = size
