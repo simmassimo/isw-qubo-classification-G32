@@ -171,7 +171,14 @@ def fit_normalize(
                     test_data['bad_rows'].append(row_index)
                 else:
                     # can now assume valid number of columns and valid numeric items
-                    arr_vals = line.strip().split(',')  
+                    arr_vals = line.strip().split(',')
+                    if (arr_vals[target_index] != 1) and (arr_vals[target_index] != 0):
+                        msg = 'target_column contains bad data at row: ' + str(row_index) 
+                        print( msg )
+                        test_data['error'] = msg
+                        write_report( outInitalRes_json, report )
+                        return test_data
+                        
                     test_data['valid_row_count'] += 1
                     for i, value in enumerate(arr_vals):
                         val = float(value)
