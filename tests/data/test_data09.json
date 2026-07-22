@@ -1,0 +1,1 @@
+{"valid_row_count": 0, "bad_rows": [], "zeros": [], "means": [0, 0, 0, 0, 0, 0], "sdevs": [0, 0, 0, 0, 0, 0], "warnings": [], "error": "target_column contains bad data at row: 1", "normalized_ok": true}
