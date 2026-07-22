@@ -4,43 +4,35 @@ import pandas as pd
 import os
 
 @pytest.fixture
-def sample_data():
-    df = pd.read_csv("../data/trial_dataset_ISW.csv")
-    sample = df.sample(n=20, random_state=42)  # random_state makes it reproducible
-    sample.to_csv("../data/sample.csv", index=False)
+def mock_csv(tmp_path):
+    df = pd.DataFrame({
+        "feature1": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+        "feature2": [0.1, 0.9, 0.2, 0.8, 0.3, 0.7, 0.4, 0.6],
+        "target":   [0,   1,   0,   1,   0,   1,   0,   1],
+    })
+    path = tmp_path / "mock.csv"
+    df.to_csv(path, index=False)
+    return str(path)
+
+def test_model_file_is_created(tmp_path, mock_csv):
+    model_path = tmp_path / "model.pkl"
+    metrics_path = tmp_path / "metrics.json"
+
+    train("random_forest", mock_csv, "target", str(model_path), str(metrics_path))
+
+    assert model_path.exists()
 
 
-def test_model_file_is_created():
-    #remove file if exists
-    if os.path.exists("../data/trial_model.pkl"):
-        os.remove("../data/trial_model.pkl")
-    #grab a random column from the dataset to use as target
-    target_column = df.columns[-1].strip()  # Select the last column as target
+def test_predictions_file_is_created(tmp_path, mock_csv):
+    model_path = tmp_path / "model.pkl"
+    metrics_path = tmp_path / "metrics.json"
+    predictions_path = tmp_path / "predictions.csv"
+    classif_stats_path = tmp_path / "classif_stats.json"
 
-    train(
-        "random_forest",
-        "../data/sample.csv",
-        target_column,
-        "../data/trial_model.pkl",
-        "../data/trial_metrics.json")
-    assert os.path.exists("../data/trial_model.pkl"), "Model file was not created."
+    # Train the model
+    train("random_forest", mock_csv, "target", str(model_path), str(metrics_path))
 
-def test_predictions_file_is_created():
-    #remove file if exists
-    if os.path.exists("../data/trial_predictions.csv"):
-        os.remove("../data/trial_predictions.csv")
-    #train the model first if necessary
-    if not os.path.exists("../data/trial_model.pkl"):
-        train(
-            "random_forest",
-            "../data/sample.csv",
-            target_column,
-            "../data/trial_model.pkl",
-            "../data/trial_metrics.json")
-    predict(
-        "../data/sample.csv",
-        "target",
-        "../data/trial_model.pkl",
-        "../data/trial_predictions.csv",
-        "../data/trial_classif_stats.json")
-    assert os.path.exists("../data/trial_predictions.csv"), "Predictions file was not created."
+    # Make predictions
+    predict(mock_csv, "target", str(model_path), str(predictions_path), str(classif_stats_path))
+
+    assert predictions_path.exists()
