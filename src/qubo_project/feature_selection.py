@@ -10,5 +10,20 @@ def select_features(
  allowance: int = 1, # Allowance of features to select
  seed: int = 42, # Seed for random repeatibility
  alpha_computations: int = 100, # Max. n. of optimizations varying alpha
-):  
+): 
+    '''
+    Compute all the correlation coeffiecents and place them
+    - in the U matrix, or
+    - the V vector
+    Pragmatic strategy to avoid memory overload
+    - read the file line by line
+    - store only a subset of columns on each passage determined by batch-size
+    - always store the target column
+    Once the columns are stored for each column pair
+    - compute the correlation coeff and place it into the matrix at Uij and Uji
+    - except for the col target correlation that goes into the V vector at Vi
+    - use the standard Open source Scipy numpy routine to actual compute the correlations
+    '''
+    
+    
     return Exception("select_features function is not implemented yet.")
