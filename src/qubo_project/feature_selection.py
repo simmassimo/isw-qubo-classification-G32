@@ -12,18 +12,44 @@ def select_features(
  alpha_computations: int = 100, # Max. n. of optimizations varying alpha
 ): 
     '''
-    Compute all the correlation coeffiecents and place them
-    - in the U matrix, or
-    - the V vector
-    Pragmatic strategy to avoid memory overload
-    - read the file line by line
-    - store only a subset of columns on each passage determined by batch-size
-    - always store the target column
-    Once the columns are stored for each column pair
-    - compute the correlation coeff and place it into the matrix at Uij and Uji
-    - except for the col target correlation that goes into the V vector at Vi
-    - use the standard Open source Scipy numpy routine to actual compute the correlations
+    THREE STAGES
+    
+    - 1 PRE-SORTING columns
+        Create a new version of normalize.csv where each column has been sorted numerically
+        Pragmatic strategy to avoid memory overload
+        do the above for a subset of columns at a time
+        re-reading the file for the subsequent subsets and appending the new cols
+        Call the output sorted.csv
+        include the target column in the sorting
+        omit the 'id' field from the sorted.csv, completely
+        
+     - 2 ACCUMULATE STATS from sorted.csv in a single pass line by line
+         Maintain the following arrays incrementally for each column 
+         Maintain the following arrays incrementally for each column 
+          arr_sum_u
+          arr_sum_sqr_u 
+          sum_uv - a pair-wise array uv to store the product of col_u and col_v
+          to generate the col-index pairs use: 
+          
+            from itertools import combinations
+            arr = range(0,COLS)
+            for i, j in combinations(arr, 2):
+                print(i, j)
+
+          
+      - 3 Construct the U matrix from the stats
+          The U matrix Uij is computed from the numerator and denominator using the stable-sum formula
+            num = n * sum_uv - sum_u * sum_v
+            denom_term1 = n * sum_u2 - sum_u * sum_u
+            denom_term2 = n * sum_v2 - sum_v * sum_v
+            if denom_term1 <= 0 or denom_term2 <= 0:
+            raise ValueError("correlation undefined for zero variance input")
+            den = math.sqrt(de
+        
+      - 4 RUN QUBO on U matrix and V
+      
     '''
+    
     
     
     return Exception("select_features function is not implemented yet.")
