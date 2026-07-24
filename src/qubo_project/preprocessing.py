@@ -63,14 +63,78 @@ def bad_header_regex( line ) :
     pat_header_item = '[ ]*[^,]+[ ]*'
     pat_header_row = '^(' + pat_header_item + ',){2,}' + pat_header_item +'$'
     pattern = re.compile( pat_header_row );
+    
     return None == re.match(pattern, line)
 
 def bad_row_regex( line, COLS ) : # pattern - not yet allowing for 1.2e-5 engineering notation
     pat_numeric_item = '[ ]*-?[0-9]+(\.[0-9]+)?[ ]*'
     pat_numeric_row = '^(' + pat_numeric_item + ',){' + str(COLS-1) + '}' + pat_numeric_item +'$'
     pattern = re.compile( pat_numeric_row );
+    
     return None == re.match(pattern, line)
 
+
+# zeros array will mark columns to exclude -> boolean 0 or 1
+def compute_excluded_columns(test_data, minPercValid):
+    limit = (1.0 - minPercValid)*test_data['valid_row_count']    # e.g 95%
+    for i, val in enumerate(test_data['zeros']):
+        if   limit <= val : test_data['zeros'][i] = 1 # too many zeros, exclude
+        else:               test_data['zeros'][i] = 0 # okay
+
+
+def compute_stats(test_data, sd_threshold ):
+    # calc stats of sample
+    # mean = sum / n
+    # sd^2 = (sum_sqr - sum*sum/n)/(n-1)
+    # sd = sqrt (sd^2)
+    for i, value in enumerate(test_data['zeros']) :
+        if value == 0  and i != test_data['target_index'] and i != test_data['id_index']:
+            # sample mean
+            mean = test_data['sum'][i] / test_data['valid_row_count']
+            # sample sd
+            sd   = math.sqrt( (test_data['sum_sqr'][i] - mean*test_data['sum'][i]) / (test_data['valid_row_count']-1) ) 
+            if sd < sd_threshold :  # then bad column, so re--classify column as almost-zero
+                test_data['warnings'].append('stdev too close to zero, so eliminating col: ' + test_data['header'][i])
+                test_data['zeros'][i] = 1
+            else:
+                test_data['means'][i] = mean
+                test_data['sdevs'][i] = sd
+
+# write out the original header omitting eliminated columns
+# and forcing first cols to be 'id' 'target'  - omit 'id' if None
+def write_header( file_out, test_data, line ) :
+    row_out = []
+
+    id_index  = test_data['id_index']
+    if(id_index != None ):
+        row_out.append(test_data['header'][id_index])
+        test_data['zeros'][id_index] = 1 # exclude as data later
+        
+    indx  = test_data['target_index']
+    row_out.append(test_data['header'][indx])
+    test_data['zeros'][indx] = 1 # exclude as data later
+
+    for i, value in enumerate(test_data['header']) :
+        if test_data['zeros'][i] == 0:
+            row_out.append(value) #copy
+    write_arr( file_out, row_out )
+
+
+
+def normalize_and_write_row(file_out, test_data, line, row_index) :
+    row_out = []
+    if not row_index in test_data['bad_rows'] : # skip bad rows
+        row_in = line.strip().split(',')
+        
+        if(test_data['id_index'] != None ): row_out.append(row_in[test_data['id_index']])
+        row_out.append(row_in[test_data['target_index']])
+        for i, value in enumerate(row_in) :
+            if test_data['zeros'][i] == 0:
+                    # normalise: 1 subtract mean, 2 divide by sd
+                    val = float(value)
+                    val = (val - test_data['means'][i]) / test_data['sdevs'][i]
+                    row_out.append(str(val))
+        write_arr( file_out, row_out )
 
 ###############################################################################################
 def process_header ( line, test_data, target_column ) : # returns test_data
@@ -78,7 +142,7 @@ def process_header ( line, test_data, target_column ) : # returns test_data
     # check header has no blanks etc
     if bad_header_regex( line ):
         test_data['error'] = 'header has bad format'
-        return # test_data
+        return 
     
     # create array of column header labels
     test_data['header'] = line.strip().split(',')
@@ -86,7 +150,7 @@ def process_header ( line, test_data, target_column ) : # returns test_data
     # assign target_index using target_column name
     if not target_column in test_data['header'] : 
         test_data['error'] = 'bad header: no field found labelled ' + target_column
-        return # test_data
+        return 
     test_data['target_index'] = test_data['header'].index( target_column );
     
     COLS = len(test_data['header'])
@@ -100,8 +164,8 @@ def process_header ( line, test_data, target_column ) : # returns test_data
     
     if COLS < min_cols:
         test_data['error'] = 'bad header: got ' + str(COLS) + ' columns should be 3 or more'
-        return # test_data
-    return # test_data
+        return 
+    return 
 
 ###############################################################################################
 def process_row( line, test_data, COLS, row_index ) :# returns test_data
@@ -109,22 +173,18 @@ def process_row( line, test_data, COLS, row_index ) :# returns test_data
     if bad_row_regex( line, COLS ):
         test_data['warnings'].append('ignoring bad row: ' + str(row_index))
         test_data['bad_rows'].append(row_index)
-        return # test_data
+        return 
         
     # below can assume valid number of columns and valid numeric items
     row = line.strip().split(',')
+    
     target_index = test_data['target_index']
     target_val = row[target_index]
-    test_data['valid_row_count'] += 1
-    '''
-    if (target_val == '1') or (target_val == '0'):
-        test_data['valid_row_count'] += 1
-    else:
+    if (target_val != '1') and (target_val != '0'):
         test_data['error'] = 'target_column contains bad value ' + target_val + ' at row: ' + str(row_index)
-        #print ('got here')    
-        return # test_data
-    '''
+        return 
 
+    test_data['valid_row_count'] += 1
     
     # compile the column stats sum & sum of sqrs & the count of almost-zero items
     for i, value in enumerate(row):
@@ -133,7 +193,7 @@ def process_row( line, test_data, COLS, row_index ) :# returns test_data
         test_data['sum_sqr'][i] += (val*val);
         if abs(val) < ALMOST_ZERO: 
             test_data['zeros'][i] += 1
-    return # test_data
+    return 
     
 ###############################################################################################
 def fit_normalize(
@@ -213,7 +273,6 @@ def fit_normalize(
         report['dataset_size'] = row_index -1 # omitting header_row but not bad rows
         
         if test_data['valid_row_count'] < 2:  
-            #print( test_data )
             fatal_error('not enough valid numeric rows: ' + str(test_data['valid_row_count']) )
             return test_data
 
@@ -222,28 +281,11 @@ def fit_normalize(
         t_start = time.time()
 
 
-        # Use arr_zeros to mark columns to exclude -> boolean 0 or 1
-        limit = (1.0 - minPercValid)*test_data['valid_row_count']    # e.g 95%
-        for i, val in enumerate(test_data['zeros']):
-            if   limit <= val : test_data['zeros'][i] = 1 # too many zeros
-            else:               test_data['zeros'][i] = 0 # okay
-
-        # calc stats of sample
-        # mean = sum / n
-        # sd^2 = (sum_sqr - sum*sum/n)/(n-1)
-        # sd = sqrt (sd^2)
-        for i in range(COLS):
-            if test_data['zeros'][i] == 0  and i != test_data['target_index'] and i != test_data['id_index']:
-                # sample mean
-                mean = test_data['sum'][i] / test_data['valid_row_count']
-                # sample sd
-                sd   = math.sqrt( (test_data['sum_sqr'][i] - mean*test_data['sum'][i]) / (test_data['valid_row_count']-1) ) 
-                if sd < ALMOST_ZERO :  # then bad column, so re--classify column as almost-zero
-                    test_data['warnings'].append('stdev too close to zero, so eliminating col: ' + test_data['header'][i])
-                    test_data['zeros'][i] = 1
-                else:
-                    test_data['means'][i] = mean
-                    test_data['sdevs'][i] = sd
+        compute_excluded_columns(test_data, minPercValid)
+        # now test_data['zeros'] no longer contain a count but 'boolean'
+        # value 1 means exclude this column from the output, 0 not
+        
+        compute_stats(test_data, ALMOST_ZERO )
                    
         update_dropped_feature_names( report, test_data['header'], test_data['zeros'] )
         update_n_kept_features( report, test_data['zeros'] )
@@ -251,41 +293,12 @@ def fit_normalize(
         # REWIND the file in order iterate all the lines again.
         file_in.seek(0) 
         line = file_in.readline() # skip header on first line
-
-        # write out the original header omitting eliminated columns
-        # and forcing first cols to be 'id' 'target'  - omit 'id' if None
         
-        row_out = []
-        
-        id_index  = test_data['id_index']
-        if(id_index != None ):
-            row_out.append(test_data['header'][id_index])
-            test_data['zeros'][id_index] = 1 # exclude as data
-        indx  = test_data['target_index']
-        row_out.append(test_data['header'][indx])
-        test_data['zeros'][indx] = 1 # exclude as data
-        
-        
-        for i, value in enumerate(test_data['header']) :
-            if test_data['zeros'][i] == 0:
-                row_out.append(value) #copy
-        write_arr( file_out, row_out )
+        write_header( file_out, test_data, line )
 
         row_index = 1
         for line in file_in :      # SECOND PASS of data rows
-            row_out = []
-            if not row_index in test_data['bad_rows'] : # skip bad rows
-                row_in = line.strip().split(',')
-                
-                if(test_data['id_index'] != None ): row_out.append(row_in[test_data['id_index']])
-                row_out.append(row_in[test_data['target_index']])
-                for i, value in enumerate(row_in) :
-                    if test_data['zeros'][i] == 0:
-                            # normalise: 1 subtract mean, 2 divide by sd
-                            val = float(value)
-                            val = (val - test_data['means'][i]) / test_data['sdevs'][i]
-                            row_out.append(str(val))
-                write_arr( file_out, row_out )
+            normalize_and_write_row( file_out, test_data, line, row_index)
             row_index += 1
         
         # stop TIMER
