@@ -3,57 +3,9 @@ import math
 import json
 import time
 import numpy as np
+import openjij as oj
 from pathlib import Path
 from itertools import combinations
-
-'''
-    We assume that the input file normalize_csv has not been
-    modified since it was written by pre_processing.py
-    Thus we omit here all that format checking done in pre_processing.py
-    Thus there will be much less occasion to to apply pytest.
-    
-    
-    THREE STAGES
-    
-    - 1 PRE-RANKING columns
-        Apply numerical ranking follows.
-        PRAGMATIC STRATEGY to avoid memory overload
-        Do this for a subset of columns at a time
-        re-reading the file for the subsequent subsets.
-        Exclude the 'id' column from any subset.
-        Exclude the 'target' column from any subset.
-        From each column create its ranking as a vector
-        Write out each subset the ranked vectors as individual lines
-        in a file ranking_XXX.csv 
-        - where XXX is the column index of the first column of the subset.
-        For the the 'target' column create its ranking as a vector
-        and write it out to target.csv
-        include the target column in the sorting
-        
-     - 2 ACCUMULATE STATS from sorted.csv in a single pass line by line
-         Maintain the following arrays incrementally for each column 
-         Maintain the following arrays incrementally for each column 
-          arr_sum_u
-          arr_sum_sqr_u 
-          sum_uv - a pair-wise array uv to store the product of col_u and col_v
-          to generate the col-index pairs use: 
-          
-            from itertools import combinations
-            arr = range(0,COLS)
-            for i, j in combinations(arr, 2):
-                print(i, j)
-
-          
-      - 3 Construct the U matrix from the stats
-          The U matrix Uij is computed from the numerator and denominator using the stable-sum formula
-            num = n * sum_uv - sum_u * sum_v
-            denom_term1 = n * sum_u2 - sum_u * sum_u
-            denom_term2 = n * sum_v2 - sum_v * sum_v
-            if denom_term1 <= 0 or denom_term2 <= 0:
-            raise ValueError("correlation undefined for zero variance input")
-            den = math.sqrt(de
-      
-'''
 
 
 # Globals so to keep error reporting code tidy
@@ -80,9 +32,6 @@ report =     {
     
 test_data = {    
     "valid_row_count":  0,
-    "bad_rows": [],         # row indices
-    "zeros": [],            # indexed by kept column
-    "means": [],            # ...
     "sdevs": [],            # ...
     "warnings": []#,
     #"error": ''
@@ -134,7 +83,7 @@ def process_header ( line, test_data, target_column ) : # returns test_data
     return 
 
 ###############################
-def rank_and_write_subset_to_file( file_in, test_data, cache_dir, col_offset, subset_size): 
+def rank_subset_and_store( array_2d, file_in, offset_in, offset_out, subset_size): 
     
     subset_cols = [[] for _ in range(subset_size)]
     
@@ -146,27 +95,69 @@ def rank_and_write_subset_to_file( file_in, test_data, cache_dir, col_offset, su
         row = line.strip().split(',')
 
         for i in range(subset_size) :
-            indx = i + col_offset
+            indx = i + offset_in
             subset_cols[i].append(row[indx])
-            #np.append(subset_cols[i], row[indx], axis=None)
-
-    # open file to store subset_cols - one row per col!
-    rank_filename = cache_dir + '/rank_' + str(col_offset).zfill(2) + '.csv' # e.g. 'rank_01.csv'
-    try:
-        file_rank = open(rank_filename, 'w')
-    except OSError:
-        test_data['error'] = 'Could not open/read file: ' + rank_filename 
-        return test_data
-            
-    # do RANKING then write to file one by one
+           
+    # do RANKING then store in array_2d
     for i in range(subset_size) :
-        rank_arr = np.array(subset_cols[i]).argsort().argsort().tolist() # RANKING numpy magic
-        str_arr = (str(x) for x in rank_arr)
-        write_arr( file_rank, str_arr )
+        rank_arr = np.array(subset_cols[i]).argsort().argsort().astype(np.uint32) # RANKING with numpy
+        array_2d[offset_out+i] = rank_arr; # this only works because rank_arr is np & the right length
+
+########################
+def new_vector(u) : # to be stored in indexed array
+    sum_u  = sum(u)
+    sum_u2 = sum(x*x for x in u)
+    return {'sum': sum_u,'sum_sqr': sum_u2, 'data': u}
+
+####################################        
+def compute_correlation_coeffient(vec_u, vec_v) :
+    
+    n = len(vec_u['data']) 
+    sum_u  = vec_u['sum'] # these have been precomputed to avois repeated sum() calls
+    sum_v  = vec_v['sum']
+    sum_u2 = vec_u['sum_sqr']
+    sum_v2 = vec_v['sum_sqr']
+    sum_uv = sum(x*y for x,y in zip(vec_u['data'],vec_v['data'])) # zip c.f. OCaml List.combine
+    # calc numerator and denominator via stable-sum formula
+    num =         n * sum_uv - sum_u * sum_v
+    denom_term1 = n * sum_u2 - sum_u * sum_u
+    denom_term2 = n * sum_v2 - sum_v * sum_v
+    
+    if denom_term1 <= 0 or denom_term1 <= 0 :
+        raise ValueError('corelation undefined for zero variance input')
+    den = math.sqrt(denom_term1 * denom_term2)
+    return num/den # will already be abs() coz sqrt is always positive
+
+#######################
+def pearson_corr_numpy(i, j, U, stats):
+    """
+    U[i], U[j]: the two arrays
+    returns their Pearson correlation coefficient 
+    (float)
+    stats help avoid recomputing means, etc
+    """
+    u = np.asarray(U[i], dtype=float)
+    v = np.asarray(U[j], dtype=float)
+
+    if not stats[i] : # u is {} so compute mean and cen2
+        stats[i]['mean'] = u.mean()
+        u_center         = u - stats[i]['mean'] # array
+        stats[i]['cen2'] = np.sum(u_center**2)
+    else:
+        u_center = u - stats[i]['mean'] # array
+          
+    if not stats[j] : # v is {} so compute mean and cen2
+        stats[j]['mean'] = v.mean()
+        v_center         = v - stats[j]['mean'] # array
+        stats[j]['cen2'] = np.sum(v_center**2)
+    else:
+        v_center = v - stats[i]['mean'] # array
         
-    file_rank.close()
-    return test_data
-        
+    num = np.sum(u_center * v_center)
+    den = np.sqrt( stats[i]['cen2'] * stats[j]['cen2'] )
+    if den == 0:
+        raise ValueError("correlation undefined for zero variance input")
+    return abs(float(num / den))
 
 ###############################################################################################
 def select_features(
@@ -245,41 +236,88 @@ def select_features(
             return test_data
        
         report['n_features'] = COLS # includes target but not id field
+ 
+        # run thru file once to get other array dimension
+        nb_ROWS=0
+        for line in file_in :
+            nb_ROWS += 1;
 
-        # must MKDIR cache if it does not exist
-        cache_dir = 'cache'
-        Path(cache_dir).mkdir(parents=True, exist_ok=True)
-        SUBSET_SIZE = 5
+        
+        # In memory RANKING array each cell is unsigned 32 bit
+        # ~900MB may be needed for 1.5 milion lines of 100 cols
+        # array rows are the ranked columns data (of length nb_ROWS)
+        # there will be COLS number of these rows 
+        
+        array_2d = np.empty( (COLS,nb_ROWS), dtype=np.uint32)
+
+        # we will read the file many times reading only subset of columns at a time
+        SUBSET_SIZE = 4
         nb_subsets = COLS // SUBSET_SIZE # integer division
         remainder  = COLS % SUBSET_SIZE    
         target_index = test_data['target_index']
         
         print('COLS :' + str(COLS))
+        print('nb_ROWS :' + str(nb_ROWS))
         print('SUBSET_SIZE :' + str(SUBSET_SIZE))
         print('nb_subsets :' + str(nb_subsets))
         print('remainder :' + str(remainder))
         print('target_index :' + str(target_index))
         
+   
         for i in range(nb_subsets) :
-            offset = target_index + i*SUBSET_SIZE
-            rank_and_write_subset_to_file( file_in, test_data, cache_dir, offset, SUBSET_SIZE ) 
-            if hasattr(test_data, 'error'):
-                fatal_error(test_data['error'])
-                return test_data
-        
+            offset_out  = i*SUBSET_SIZE
+            offset_in   = target_index + offset_out
+            rank_subset_and_store( array_2d, file_in, offset_in, offset_out, SUBSET_SIZE ) 
+
         if 0 < remainder :
-            offset = target_index + nb_subsets*SUBSET_SIZE
-            rank_and_write_subset_to_file( file_in, test_data, cache_dir, offset, remainder )
-            if hasattr(test_data, 'error'):
-                fatal_error(test_data['error'])
-                return test_data
-         
-    write_report() 
-    # close all open files here
-    file_in.close();
-    file_out.close();
-    
-    return test_data
+            offset_out  = nb_subsets*SUBSET_SIZE
+            offset_in   = target_index + offset_out
+            rank_subset_and_store( array_2d, file_in, offset_in, offset_out, remainder ) 
+
+        # done reading normalize_csv so can close file
+        file_in.close();
+        
+        print('array_2d :' + str( print(array_2d[0:5, 0:5]) ))
+
+        # Create QUBO matrix to be filled with rho value 
+        Q_triu = np.zeros( (COLS-1,COLS-1), dtype=np.float64)
+        Q_diag = np.zeros( (COLS-1), dtype=np.float64)
+        stats = [{}] * COLS # to fill with {'mean','cen2'}
+        
+        # generate array of pairs of column indices (i,j)
+        # - without the (j,i) or the (i,i)
+        pairs = combinations(range(0,COLS), 2)
+        for i, j in pairs :
+            rho = pearson_corr_numpy(i, j, array_2d, stats)
+
+            if i == 0 : # the ranked target vector
+                Q_diag[j-1] =  rho # a vector
+            else:
+                Q_triu[i-1][j-1] = rho # a matrix
+            
+        # create and print Q_matrix for a variety of alpha values
+
+        for i in range(1,20):
+            alpha = i/10.0
+            # print( str(i) + ' alpha : ' + str(alpha) + ' Q:' )
+            Q_matrix = (1-alpha) * Q_triu.copy()
+            # replace the diagonal with Q_diag * alpha
+            np.fill_diagonal(Q_matrix, alpha * Q_diag)   
+            # print(Q_matrix[0:5, 0:5])
+            
+            # Create a solver
+            sampler = oj.SASampler()
+
+            # Solve the QUBO problem
+            response = sampler.sample_qubo(Q_matrix)
+
+            # Get the best solution
+            X_vector = response.first.sample
+            
+            count = np.sum(np.array(list(X_vector.values())) == 1)
+            
+            print("alpha: ", alpha, "count: ", count)
+            # print("X_vector: ", X_vector)
 
     
 print (select_features('normalise.csv', 'output_ottim_csv', 'report2.json','target'))
