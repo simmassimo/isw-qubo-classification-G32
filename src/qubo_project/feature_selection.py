@@ -63,6 +63,7 @@ def bad_header_regex( line ) :
     return None == re.match(pattern, line)
 
 ###############################################################################################
+
 def process_header ( line, test_data, target_column ) : # returns test_data
 
     # check header has no blanks etc
@@ -83,6 +84,7 @@ def process_header ( line, test_data, target_column ) : # returns test_data
     return 
 
 ###############################
+
 def rank_subset_and_store( array_2d, file_in, offset_in, offset_out, subset_size): 
     
     subset_cols = [[] for _ in range(subset_size)]
@@ -104,6 +106,7 @@ def rank_subset_and_store( array_2d, file_in, offset_in, offset_out, subset_size
         array_2d[offset_out+i] = rank_arr; # this only works because rank_arr is np & the right length
 
 ########################
+
 def new_vector(u) : # to be stored in indexed array
     sum_u  = sum(u)
     sum_u2 = sum(x*x for x in u)
@@ -140,6 +143,7 @@ def pearson_corr_numpy(i, j, U, stats):
     return abs(float(num / den))
 
 ###############################################################################################
+
 def select_features(
  normalized_csv: str, # Input dataset name
  #reducedTrain_csv: str, # Name of output training dataset with reduced feat.
@@ -183,12 +187,12 @@ def select_features(
         file_out = open(output_ottim_csv, 'w')
     except OSError:
         file_in.close()
-        fatal_error('Could not open/write file: ' + normalized_csv )
+        fatal_error('Could not open/write file: ' + output_ottim_csv )
         return test_data
 
     with file_in:
 
-        # start TIMER
+        # start TIMER tbc..
         t_start = time.time()
         
         # READ HEADER
@@ -236,6 +240,7 @@ def select_features(
         remainder  = COLS % SUBSET_SIZE    
         target_index = test_data['target_index']
         
+        # debugging
         print('COLS :' + str(COLS))
         print('nb_ROWS :' + str(nb_ROWS))
         print('SUBSET_SIZE :' + str(SUBSET_SIZE))
@@ -285,7 +290,7 @@ def select_features(
             np.fill_diagonal(Q_matrix, alpha * Q_diag)   
             # print(Q_matrix[0:5, 0:5])
             
-            # Create a solver
+            # Create a solver SA = Simulated Annealing
             sampler = oj.SASampler()
 
             # Solve the QUBO problem
@@ -297,7 +302,7 @@ def select_features(
             count = np.sum(np.array(list(X_vector.values())) == 1)
             
             print("alpha: ", alpha, "count: ", count)
-            # print("X_vector: ", X_vector)
+            print("X_vector: ", X_vector)
 
     
 #print (select_features('normalise.csv', 'output_ottim_csv', 'report2.json','target'))
