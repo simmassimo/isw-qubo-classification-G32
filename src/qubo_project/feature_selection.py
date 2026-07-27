@@ -108,27 +108,7 @@ def new_vector(u) : # to be stored in indexed array
     sum_u  = sum(u)
     sum_u2 = sum(x*x for x in u)
     return {'sum': sum_u,'sum_sqr': sum_u2, 'data': u}
-
-####################################        
-def compute_correlation_coeffient(vec_u, vec_v) :
     
-    n = len(vec_u['data']) 
-    sum_u  = vec_u['sum'] # these have been precomputed to avois repeated sum() calls
-    sum_v  = vec_v['sum']
-    sum_u2 = vec_u['sum_sqr']
-    sum_v2 = vec_v['sum_sqr']
-    sum_uv = sum(x*y for x,y in zip(vec_u['data'],vec_v['data'])) # zip c.f. OCaml List.combine
-    # calc numerator and denominator via stable-sum formula
-    num =         n * sum_uv - sum_u * sum_v
-    denom_term1 = n * sum_u2 - sum_u * sum_u
-    denom_term2 = n * sum_v2 - sum_v * sum_v
-    
-    if denom_term1 <= 0 or denom_term1 <= 0 :
-        raise ValueError('corelation undefined for zero variance input')
-    den = math.sqrt(denom_term1 * denom_term2)
-    return num/den # will already be abs() coz sqrt is always positive
-
-#######################
 def pearson_corr_numpy(i, j, U, stats):
     """
     U[i], U[j]: the two arrays
@@ -277,7 +257,7 @@ def select_features(
         # done reading normalize_csv so can close file
         file_in.close();
         
-        print('array_2d :' + str( print(array_2d[0:5, 0:5]) ))
+        # print('array_2d :' + str( print(array_2d[0:5, 0:5]) ))
 
         # Create QUBO matrix to be filled with rho value 
         Q_triu = np.zeros( (COLS-1,COLS-1), dtype=np.float64)
@@ -297,7 +277,7 @@ def select_features(
             
         # create and print Q_matrix for a variety of alpha values
 
-        for i in range(1,20):
+        for i in range(1,10):
             alpha = i/10.0
             # print( str(i) + ' alpha : ' + str(alpha) + ' Q:' )
             Q_matrix = (1-alpha) * Q_triu.copy()
@@ -320,4 +300,5 @@ def select_features(
             # print("X_vector: ", X_vector)
 
     
-print (select_features('normalise.csv', 'output_ottim_csv', 'report2.json','target'))
+#print (select_features('normalise.csv', 'output_ottim_csv', 'report2.json','target'))
+select_features('normalise.csv', 'output_ottim_csv', 'report2.json','target')
