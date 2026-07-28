@@ -12,10 +12,11 @@ def PrepareData(csv_file: str, target_column: str):
     csv = ReadCSV(csv_file)
     tnow = time.time()
     x_data, y_data = SeparateTarget(csv, target_column)
+    y_header = y_data[0]  # Save header row
+    y_data = y_data[1:].astype(float)  # Exclude header row and convert to float
     x_headers = x_data[0, :]  # Save header row
     x_data = x_data[1:, :].astype(float)  # Exclude header row and convert to float
-    y_data = y_data[1:].astype(float)  # Exclude header row and convert to float
-    return x_data, y_data, x_headers, tnow - t
+    return x_data, y_data, x_headers, y_header, tnow - t
 
 def train(
  classifier: str, # type of classifier to use
@@ -26,7 +27,7 @@ def train(
  seed: int = 42,
 ):
     classifier = classifier.lower().strip()
-    x_train, y_train, x_headers, t_in = PrepareData(reducedTrain_csv, target_column)
+    x_train, y_train, x_headers, y_header, t_in = PrepareData(reducedTrain_csv, target_column)
     if x_train is None or y_train is None:
         raise ValueError("Training data could not be prepared. Check the input CSV and target column.")
     if classifier in ["random_forest", "rf", "randomforest", "random forest"]:
@@ -60,7 +61,7 @@ def predict(
  predictions_csv: str, # Output predictions
  classif_stats_json: str, # File with classification stats
 ):
-    x_test, y_test, x_headers, _ = PrepareData(reduced_Test_csv, target_column)
+    x_test, y_test, x_headers, y_header, t_in = PrepareData(reduced_Test_csv, target_column)
 
     # Load the trained classifier
     clf = joblib.load(f'{model_path}')

@@ -13,7 +13,7 @@ def ReadCSV(input_csv: str):
 
 def SeparateTarget(csv, target_column: str):
     headers = csv[0]
-    target_index = np.where(headers == target_column)[0][0]
+    target_index = np.where(headers == target_column)[0][0] if target_column in headers else -1
     if target_index == -1:
         raise ValueError(f"Target column '{target_column}' not found in CSV headers.")
     target = csv[:, target_index]
