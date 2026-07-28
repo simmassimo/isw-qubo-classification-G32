@@ -1,13 +1,9 @@
 import json
-from pathlib import Path
-  
+
 def find_warning(arr, s) :
     for msg in arr:
             if s in msg: return True
     return False
-  
-# read a row form normalized file
-#def get_normalize(file_name, row_nb):
 
 # load/read json file
 def get_report(file_name):
@@ -16,9 +12,8 @@ def get_report(file_name):
         file.close();
         return report
 
-def get_filenames(dir_, file_py) :
-    base_name = Path(file_py).stem
-    test_nb = base_name.split('_')[1]
+# build the dict of per-scenario file paths for a given dataset number, e.g. '01'
+def get_filenames(dir_, test_nb) :
     files = {};
     files['input']  = dir_ + 'input'  + test_nb + '.csv'
     files['report'] = dir_ + 'report' + test_nb + '.json'

@@ -34,15 +34,10 @@ def write_report() :
     try:
         file = open(report_filename, 'w')
     except OSError:
-        print( 'CATASTROPHIC ERROR cannot open/write outInitalRes_json: ' + jsonfile)
+        print( 'CATASTROPHIC ERROR cannot open/write outInitalRes_json: ' + report_filename)
         return
     json.dump(report, file )
-    file.close();
-
-def fatal_error( msg: str ) :
-    print( msg )
-    test_data['error'] = msg
-    write_report()
+    file.close()
 
 def update_dropped_feature_names( report, arr_heads, arr_zeros ) :
     for i, value in enumerate(arr_heads):
@@ -62,14 +57,14 @@ def write_arr( file, arr ) :
 def bad_header_regex( line ) :
     pat_header_item = '[ ]*[^,]+[ ]*'
     pat_header_row = '^(' + pat_header_item + ',){2,}' + pat_header_item +'$'
-    pattern = re.compile( pat_header_row );
+    pattern = re.compile( pat_header_row )
     
     return None == re.match(pattern, line)
 
 def bad_row_regex( line, COLS ) : # pattern - not yet allowing for 1.2e-5 engineering notation
     pat_numeric_item = '[ ]*-?[0-9]+(\.[0-9]+)?[ ]*'
     pat_numeric_row = '^(' + pat_numeric_item + ',){' + str(COLS-1) + '}' + pat_numeric_item +'$'
-    pattern = re.compile( pat_numeric_row );
+    pattern = re.compile( pat_numeric_row )
     
     return None == re.match(pattern, line)
 
@@ -142,16 +137,14 @@ def process_header ( line, test_data, target_column ) : # returns test_data
 
     # check header has no blanks etc
     if bad_header_regex( line ):
-        test_data['error'] = 'header has bad format'
-        return 
+        raise ValueError('header has bad format')
     
     # create array of column header labels
     test_data['header'] = line.strip().split(',')
     
     # assign target_index using target_column name
     if not target_column in test_data['header'] : 
-        test_data['error'] = 'bad header: no field found labelled ' + target_column
-        return 
+        raise ValueError('bad header: no field found labelled ' + target_column)
     test_data['target_index'] = test_data['header'].index( target_column );
     
     COLS = len(test_data['header'])
@@ -164,8 +157,7 @@ def process_header ( line, test_data, target_column ) : # returns test_data
         min_cols = 3
     
     if COLS < min_cols:
-        test_data['error'] = 'bad header: got ' + str(COLS) + ' columns should be 3 or more'
-        return 
+        raise ValueError('bad header: got ' + str(COLS) + ' columns should be 3 or more')
     return 
 
 ###############################################################################################
@@ -182,8 +174,7 @@ def process_row( line, test_data, COLS, row_index ) :# returns test_data
     target_index = test_data['target_index']
     target_val = row[target_index]
     if (target_val != '1') and (target_val != '0'):
-        test_data['error'] = 'target_column contains bad value ' + target_val + ' at row: ' + str(row_index)
-        return 
+        raise ValueError('target_column contains bad value ' + target_val + ' at row: ' + str(row_index)) 
 
     test_data['valid_row_count'] += 1
     
@@ -211,26 +202,22 @@ def fit_normalize(
         
     # check for invalid argument
     if minPercValid < 0.0 or 1.0 < minPercValid :
-        fatal_error('minPercValid: ' + str(minPercValid) + ' not in range [0,1]')
-        return test_data
+        raise ValueError('minPercValid: ' + str(minPercValid) + ' not in range [0,1]')
 
     # check for invalid argument
     if len(target_column) < 1:
-        fatal_error('target_column: parameter is blank')
-        return test_data
+        raise ValueError('target_column: parameter is blank')
 
     try:
         file_in = open(input_csv, 'r')
     except OSError:      
-        fatal_error('Could not open/read file: ' + input_csv )
-        return test_data
+        raise ValueError('Could not open/read file: ' + input_csv )
         
     try:  # lock the file, so any error comes now, not after much processing
         file_out = open(normalized_csv, 'w')
     except OSError:
         file_in.close()
-        fatal_error('Could not open/write file: ' + normalized_csv )
-        return test_data
+        raise ValueError('Could not open/write file: ' + normalized_csv )
 
     with file_in:
 
@@ -240,9 +227,8 @@ def fit_normalize(
         # READ HEADER
         line = file_in.readline()
         process_header ( line, test_data, target_column )
-        if hasattr(test_data, 'error'):
-            fatal_error(test_data['error'])
-            return test_data
+        if 'error' in test_data:
+            raise ValueError(test_data['error'])
         
         COLS = len(test_data['header'])
         report['n_input_features'] = COLS # includes target and id fields
@@ -260,9 +246,8 @@ def fit_normalize(
 
             process_row( line, test_data, COLS, row_index )
             
-            if hasattr(test_data, 'error'):
-                fatal_error(test_data['error'])
-                return test_data
+            if 'error' in test_data:
+                raise ValueError(test_data['error'])
                 
             row_index += 1
 
@@ -273,13 +258,10 @@ def fit_normalize(
         report['dataset_size'] = row_index -1 # omitting header_row but not bad rows
         
         if test_data['valid_row_count'] < 2:  
-            fatal_error('not enough valid numeric rows: ' + str(test_data['valid_row_count']) )
-            return test_data
-
+            raise ValueError('not enough valid numeric rows: ' + str(test_data['valid_row_count']) )
 
         # re-start TIMER
         t_start = time.time()
-
 
         compute_excluded_columns(test_data, minPercValid)
         # now test_data['zeros'] no longer contain a count but 'boolean'
@@ -307,10 +289,10 @@ def fit_normalize(
 
     write_report() 
     # close all open files here
-    file_in.close();
-    file_out.close();
+    file_in.close()
+    file_out.close()
     
     return test_data
 
-print (fit_normalize('data/trial_dataset_ISW.csv'))
+#print(fit_normalize('data/trial_dataset_ISW.csv'))
 #print (fit_normalize('data/million.csv'))
