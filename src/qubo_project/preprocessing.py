@@ -107,7 +107,7 @@ def write_header( file_out, test_data, line ) :
 
     id_index  = test_data['id_index']
     if(id_index != None ):
-        row_out.append(test_data['header'][id_index])
+        ### row_out.append(test_data['header'][id_index])
         test_data['zeros'][id_index] = 1 # exclude as data later
         
     indx  = test_data['target_index']
@@ -126,7 +126,8 @@ def normalize_and_write_row(file_out, test_data, line, row_index) :
     if not row_index in test_data['bad_rows'] : # skip bad rows
         row_in = line.strip().split(',')
         
-        if(test_data['id_index'] != None ): row_out.append(row_in[test_data['id_index']])
+        ###if(test_data['id_index'] != None ):
+        ###   row_out.append(row_in[test_data['id_index']])
         row_out.append(row_in[test_data['target_index']])
         for i, value in enumerate(row_in) :
             if test_data['zeros'][i] == 0:
@@ -199,7 +200,7 @@ def process_row( line, test_data, COLS, row_index ) :# returns test_data
 def fit_normalize(
     input_csv: str = 'input.csv',           # Input dataset name
     target_column: str = 'target',          # column name of target - allows target to head any column it likes
-    normalized_csv: str = 'normalise.csv',  # Name of output normalized data set
+    normalized_csv: str = 'normalize.csv',  # Name of output normalized data set
     outInitalRes_json: str = 'report.json', # Name of output statistics and data file
     minPercValid: float = 0.05,             # Minimum % of valid non-zero data for a column
 ):
@@ -264,7 +265,6 @@ def fit_normalize(
                 return test_data
                 
             row_index += 1
-            #if( row_index == 5 ): print(test_data['valid_row_count'])
 
         # stop TIMER
         t_end = time.time()
@@ -312,4 +312,5 @@ def fit_normalize(
     
     return test_data
 
-#print (fit_normalize('data/trial_dataset_ISW.csv'))
+print (fit_normalize('data/trial_dataset_ISW.csv'))
+#print (fit_normalize('data/million.csv'))
