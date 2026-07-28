@@ -3,41 +3,16 @@ import math
 import json
 import time
 
-# Globals so to keep error reporting code tidy
-report_filename = ''
-report =     {
-    "n_input_features": 0,  # For now
-    "n_kept_features": 0,   # These will also include id & target cols
-    "dataset_size": 0,      # nb rows of input is this total_row_count
-    "dataset_input_time": 0.0,      # secs
-    "dataset_processing_time": 0.0, # secs
-    "dropped_feature_names": [] # e.g. ["feature_1", "feature_20"]
-}
-    
-test_data = {    
-    "valid_row_count":  0,
-    "bad_rows": [],         # row indices
-    "means": [],            # ...
-    "sdevs": [],            # ...
-    "warnings": [],
-    "header": [],
-    "sum": [],
-    "sum_sqr": [],
-    "zeros": []#,
-    #"error": ''
-}
+ALMOST_ZERO = 1e-10 # Never reassigned in this module
 
-ALMOST_ZERO = 1e-10 
-# end of globals
-
-def write_report() :
+def write_report(outInitalRes_json, report) :
     try:
-        file = open(report_filename, 'w')
+        file = open(outInitalRes_json, 'w')
     except OSError:
-        print( 'CATASTROPHIC ERROR cannot open/write outInitalRes_json: ' + report_filename)
-        return
+        print( 'CATASTROPHIC ERROR cannot open/write outInitalRes_json: ' + jsonfile)
+
     json.dump(report, file )
-    file.close()
+    file.close();
 
 def update_dropped_feature_names( report, arr_heads, arr_zeros ) :
     for i, value in enumerate(arr_heads):
@@ -57,14 +32,14 @@ def write_arr( file, arr ) :
 def bad_header_regex( line ) :
     pat_header_item = '[ ]*[^,]+[ ]*'
     pat_header_row = '^(' + pat_header_item + ',){2,}' + pat_header_item +'$'
-    pattern = re.compile( pat_header_row )
+    pattern = re.compile( pat_header_row );
     
     return None == re.match(pattern, line)
 
 def bad_row_regex( line, COLS ) : # pattern - not yet allowing for 1.2e-5 engineering notation
     pat_numeric_item = '[ ]*-?[0-9]+(\.[0-9]+)?[ ]*'
     pat_numeric_row = '^(' + pat_numeric_item + ',){' + str(COLS-1) + '}' + pat_numeric_item +'$'
-    pattern = re.compile( pat_numeric_row )
+    pattern = re.compile( pat_numeric_row );
     
     return None == re.match(pattern, line)
 
@@ -137,6 +112,7 @@ def process_header ( line, test_data, target_column ) : # returns test_data
 
     # check header has no blanks etc
     if bad_header_regex( line ):
+        write_report(outInitalRes_json, report)
         raise ValueError('header has bad format')
     
     # create array of column header labels
@@ -144,7 +120,9 @@ def process_header ( line, test_data, target_column ) : # returns test_data
     
     # assign target_index using target_column name
     if not target_column in test_data['header'] : 
-        raise ValueError('bad header: no field found labelled ' + target_column)
+        write_report(outInitalRes_json, report)
+        raise ValueError('bad header: no field found labelled ' + target_column )
+
     test_data['target_index'] = test_data['header'].index( target_column );
     
     COLS = len(test_data['header'])
@@ -157,8 +135,8 @@ def process_header ( line, test_data, target_column ) : # returns test_data
         min_cols = 3
     
     if COLS < min_cols:
+        write_report(outInitalRes_json, report)
         raise ValueError('bad header: got ' + str(COLS) + ' columns should be 3 or more')
-    return 
 
 ###############################################################################################
 def process_row( line, test_data, COLS, row_index ) :# returns test_data
@@ -174,7 +152,8 @@ def process_row( line, test_data, COLS, row_index ) :# returns test_data
     target_index = test_data['target_index']
     target_val = row[target_index]
     if (target_val != '1') and (target_val != '0'):
-        raise ValueError('target_column contains bad value ' + target_val + ' at row: ' + str(row_index)) 
+        write_report(outInitalRes_json, report)
+        raise ValueError('target_column contains bad value ' + target_val + ' at row: ' + str(row_index))
 
     test_data['valid_row_count'] += 1
     
@@ -185,7 +164,7 @@ def process_row( line, test_data, COLS, row_index ) :# returns test_data
         test_data['sum_sqr'][i] += (val*val);
         if abs(val) < ALMOST_ZERO: 
             test_data['zeros'][i] += 1
-    return 
+
     
 ###############################################################################################
 def fit_normalize(
@@ -195,29 +174,52 @@ def fit_normalize(
     outInitalRes_json: str = 'report.json', # Name of output statistics and data file
     minPercValid: float = 0.05,             # Minimum % of valid non-zero data for a column
 ):
+
+    report =     {
+        "n_input_features": 0,  # For now
+        "n_kept_features": 0,   # These will also include id & target cols
+        "dataset_size": 0,      # nb rows of input is this total_row_count
+        "dataset_input_time": 0.0,      # secs
+        "dataset_processing_time": 0.0, # secs
+        "dropped_feature_names": [] # e.g. ["feature_1", "feature_20"]
+    }
     
-    # assign a global copy for convenience   
-    global report_filename
-    report_filename = outInitalRes_json
-        
+
+    test_data = {    
+        "valid_row_count":  0,
+        "bad_rows": [],         # row indices
+        "means": [],            # ...
+        "sdevs": [],            # ...
+        "warnings": [],
+        "header": [],
+        "sum": [],
+        "sum_sqr": [],
+        "zeros": []#,
+        #"error": ''
+    }
+
     # check for invalid argument
     if minPercValid < 0.0 or 1.0 < minPercValid :
+        write_report(outInitalRes_json, report)
         raise ValueError('minPercValid: ' + str(minPercValid) + ' not in range [0,1]')
 
     # check for invalid argument
     if len(target_column) < 1:
+        write_report(outInitalRes_json, report)
         raise ValueError('target_column: parameter is blank')
 
     try:
         file_in = open(input_csv, 'r')
     except OSError:      
-        raise ValueError('Could not open/read file: ' + input_csv )
+        write_report(outInitalRes_json, report)
+        raise FileNotFoundError( 'Could not open/read file: ' + input_csv )
         
     try:  # lock the file, so any error comes now, not after much processing
         file_out = open(normalized_csv, 'w')
     except OSError:
         file_in.close()
-        raise ValueError('Could not open/write file: ' + normalized_csv )
+        write_report(outInitalRes_json, report)
+        raise FileNotFoundError( 'Could not open/write file: ' + normalized_csv )
 
     with file_in:
 
@@ -227,8 +229,6 @@ def fit_normalize(
         # READ HEADER
         line = file_in.readline()
         process_header ( line, test_data, target_column )
-        if 'error' in test_data:
-            raise ValueError(test_data['error'])
         
         COLS = len(test_data['header'])
         report['n_input_features'] = COLS # includes target and id fields
@@ -245,10 +245,6 @@ def fit_normalize(
         for line in file_in :      # FIRST PASS of data rows
 
             process_row( line, test_data, COLS, row_index )
-            
-            if 'error' in test_data:
-                raise ValueError(test_data['error'])
-                
             row_index += 1
 
         # stop TIMER
@@ -258,10 +254,13 @@ def fit_normalize(
         report['dataset_size'] = row_index -1 # omitting header_row but not bad rows
         
         if test_data['valid_row_count'] < 2:  
-            raise ValueError('not enough valid numeric rows: ' + str(test_data['valid_row_count']) )
+            write_report(outInitalRes_json, report)
+            raise ValueError('not enough valid numeric rows: ' + str(test_data['valid_row_count']))
+
 
         # re-start TIMER
         t_start = time.time()
+
 
         compute_excluded_columns(test_data, minPercValid)
         # now test_data['zeros'] no longer contain a count but 'boolean'
@@ -287,12 +286,12 @@ def fit_normalize(
         t_end = time.time()
         report["dataset_processing_time"] = round(t_end - t_start,2)
 
-    write_report() 
+    write_report(outInitalRes_json, report) 
     # close all open files here
-    file_in.close()
-    file_out.close()
+    file_in.close();
+    file_out.close();
     
     return test_data
 
-#print(fit_normalize('data/trial_dataset_ISW.csv'))
+fit_normalize('data/trial_dataset_ISW.csv')
 #print (fit_normalize('data/million.csv'))
