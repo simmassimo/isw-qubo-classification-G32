@@ -108,7 +108,7 @@ def normalize_and_write_row(file_out, test_data, line, row_index) :
         write_arr( file_out, row_out )
 
 ###############################################################################################
-def process_header ( line, test_data, target_column ) : # returns test_data
+def process_header ( line, test_data, target_column, outInitalRes_json, report): # returns test_data
 
     # check header has no blanks etc
     if bad_header_regex( line ):
@@ -139,7 +139,7 @@ def process_header ( line, test_data, target_column ) : # returns test_data
         raise ValueError('bad header: got ' + str(COLS) + ' columns should be 3 or more')
 
 ###############################################################################################
-def process_row( line, test_data, COLS, row_index ) :# returns test_data
+def process_row( line, test_data, COLS, row_index, outInitalRes_json, report) :# returns test_data
     # skip rows that fail regexp - reporting row_index to stderr
     if bad_row_regex( line, COLS ):
         test_data['warnings'].append('ignoring bad row: ' + str(row_index))
@@ -228,7 +228,7 @@ def fit_normalize(
         
         # READ HEADER
         line = file_in.readline()
-        process_header ( line, test_data, target_column )
+        process_header ( line, test_data, target_column, outInitalRes_json, report)
         
         COLS = len(test_data['header'])
         report['n_input_features'] = COLS # includes target and id fields
@@ -244,7 +244,7 @@ def fit_normalize(
                     
         for line in file_in :      # FIRST PASS of data rows
 
-            process_row( line, test_data, COLS, row_index )
+            process_row( line, test_data, COLS, row_index, outInitalRes_json, report)
             row_index += 1
 
         # stop TIMER
