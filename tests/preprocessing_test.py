@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from qubo_project.preprocessing import fit_normalize, write_report
+from qubo_project.preprocessing import fit_normalize
 from utils import find_warning, get_filenames
 
 DATA_DIR = 'tests/data/'
@@ -17,7 +17,7 @@ def fname(request):
 # assert: fatal error 'Could not open/read file'
 @pytest.mark.parametrize('fname', ['00'], indirect=True)
 def test_fit_normalize_with_missing_file_raises_error(fname):
-    with pytest.raises(ValueError, match="Could not open/read file"):
+    with pytest.raises(FileNotFoundError, match="Could not open/read file"):
         fit_normalize(
             fname['input'],
             'target',
@@ -38,8 +38,6 @@ def test_fit_normalize_with_bad_row_raises_warning(fname):
         fname['report'],
         0.05 )
 
-    write_report()
-
     assert find_warning(test_data['warnings'], 'ignoring bad row')
 
 
@@ -53,8 +51,6 @@ def test_fit_normalize_with_empty_field_raises_warning(fname):
         fname['normalize'],
         fname['report'],
         0.05 )
-
-    write_report()
 
     assert find_warning(test_data['warnings'], 'ignoring bad row')
 
@@ -89,7 +85,7 @@ def test_fit_normalize_with_empty_header_raises_error(fname):
 # assert: fatal error 'header has bad format'
 @pytest.mark.parametrize('fname', ['05'], indirect=True)
 def test_fit_normalize_with_too_few_columns_raises_error(fname):
-    with pytest.raises(ValueError, match="bad header: got 2 columns should be 3 or more"):
+    with pytest.raises(ValueError, match="header has bad format"):
         fit_normalize(
             fname['input'],
             'target',
@@ -123,8 +119,6 @@ def test_fit_normalize_with_bad_column_stdev_raises_warning(fname):
         fname['report'],
         0.05 )
 
-    write_report()
-
     assert find_warning(test_data['warnings'], 'stdev too close to zero, so eliminating col: ')
 
 
@@ -146,7 +140,7 @@ def test_fit_normalize_creates_normalized_file(fname):
 # assert: 'target_column contains bad data'
 @pytest.mark.parametrize('fname', ['09'], indirect=True)
 def test_fit_normalize_with_bad_target_column_format_raises_error(fname):
-    with pytest.raises(ValueError, match="target_column contains bad data at row:"):
+    with pytest.raises(ValueError, match="target_column contains bad value"):
         fit_normalize(
             fname['input'],
             'target',
