@@ -16,15 +16,21 @@ def mock_csv(tmp_path):
 
 
 def test_feature_selection_produces_binary_vector(mock_csv, tmp_path):
-    output_csv = tmp_path / "selected_features.csv"
-    v = select_features(mock_csv, "target", str(output_csv))
+    reduced_train_csv = tmp_path / "reduced_train.csv"
+    reduced_test_csv = tmp_path / "reduced_test.csv"
+    output_ottim_csv = tmp_path / "test_ottim.csv"
+    output_json = tmp_path / "test.json"
+    v = select_features(mock_csv, reduced_train_csv, reduced_test_csv, output_ottim_csv, output_json, "target")
 
     # Check if the returned vector is binary
     assert len(v) > 0 and set(v).issubset({0, 1})
 
 def test_feature_selection_must_be_roughly_20_percent(mock_csv, tmp_path):
-    output_csv = tmp_path / "selected_features.csv"
-    v = select_features(mock_csv, "target", str(output_csv))
+    reduced_train_csv = tmp_path / "reduced_train.csv"
+    reduced_test_csv = tmp_path / "reduced_test.csv"
+    output_ottim_csv = tmp_path / "test_ottim.csv"
+    output_json = tmp_path / "test.json"
+    v = select_features(mock_csv, reduced_train_csv, reduced_test_csv, output_ottim_csv, output_json, "target", percSelected = 0.2)
 
     # Check if at least 20% of the 1s in the vector are present
     assert sum(v) >= 0.15 * len(v) and sum(v) <= 0.25 * len(v), "Selected features should be roughly 20% of the total features."
