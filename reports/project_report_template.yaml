@@ -14,7 +14,7 @@ schema_version: "1.0"
 
 group_id: "G32"
 repository_url: "https://github.com/simmassimo/isw-qubo-classification-G32.git"
-submission_date: "YYYY-MM-DD"
+submission_date: "2026-07-30"
 
 students:
   - student_id: "60/61/65985"        #Matricola completa
