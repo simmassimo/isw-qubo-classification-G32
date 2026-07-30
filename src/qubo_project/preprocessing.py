@@ -1,3 +1,4 @@
+import argparse
 import re
 import math
 import json
@@ -293,5 +294,37 @@ def fit_normalize(
     
     return test_data
 
-#fit_normalize('data/trial_dataset_ISW.csv')
-fit_normalize('data/output.csv')
+
+###########################################################
+
+def main():
+    parser = argparse.ArgumentParser(description='Preprocessing')
+    
+    # Positional arguments (required)
+    # Optional argument 
+    parser.add_argument('--input',        type=str, default='data/trial_dataset_ISW.csv',
+        help='Input dataset_csv file path')
+    parser.add_argument('--target',               type=str, default='target',
+        help='Name of target column in input csv file')
+    parser.add_argument('--out-data',            type=str, default='normalized.csv',
+        help='Output normalized_csv file path')
+    parser.add_argument('--out-json',             type=str, default='report.json',
+        help='Output preprocessing_result.json file path')
+    
+    parser.add_argument('--min-perc-valid', type=float, default='0.06',
+                        help='Perc-valid expressed a decimal')
+ 
+    args = parser.parse_args()
+ 
+    fit_normalize(
+         args.input,
+         args.target,
+         args.out_data,
+         args.out_json,
+         args.min_perc_valid
+        )
+
+if __name__ == '__main__':  # uncomment these lines to get standard behaviour
+    main()   
+
+
