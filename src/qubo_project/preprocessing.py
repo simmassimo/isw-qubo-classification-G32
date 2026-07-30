@@ -12,7 +12,7 @@ def write_report(outInitalRes_json, report) :
         print( 'CATASTROPHIC ERROR cannot open/write outInitalRes_json: ' + jsonfile)
 
     json.dump(report, file )
-    file.close();
+    file.close()
 
 def update_dropped_feature_names( report, arr_heads, arr_zeros ) :
     for i, value in enumerate(arr_heads):
@@ -32,14 +32,14 @@ def write_arr( file, arr ) :
 def bad_header_regex( line ) :
     pat_header_item = '[ ]*[^,]+[ ]*'
     pat_header_row = '^(' + pat_header_item + ',){2,}' + pat_header_item +'$'
-    pattern = re.compile( pat_header_row );
+    pattern = re.compile( pat_header_row )
     
     return None == re.match(pattern, line)
 
 def bad_row_regex( line, COLS ) : # pattern - not yet allowing for 1.2e-5 engineering notation
     pat_numeric_item = '[ ]*-?[0-9]+(\.[0-9]+)?[ ]*'
     pat_numeric_row = '^(' + pat_numeric_item + ',){' + str(COLS-1) + '}' + pat_numeric_item +'$'
-    pattern = re.compile( pat_numeric_row );
+    pattern = re.compile( pat_numeric_row )
     
     return None == re.match(pattern, line)
 
@@ -123,15 +123,15 @@ def process_header ( line, test_data, target_column, outInitalRes_json, report):
         write_report(outInitalRes_json, report)
         raise ValueError('bad header: no field found labelled ' + target_column )
 
-    test_data['target_index'] = test_data['header'].index( target_column );
+    test_data['target_index'] = test_data['header'].index( target_column )
     
     COLS = len(test_data['header'])
     # assign id_index if present
     if not 'id' in test_data['header'] : 
-        test_data['id_index'] = None;
+        test_data['id_index'] = None
         min_cols = 2
     else:
-        test_data['id_index'] = test_data['header'].index( 'id' );
+        test_data['id_index'] = test_data['header'].index( 'id' )
         min_cols = 3
     
     if COLS < min_cols:
@@ -160,8 +160,8 @@ def process_row( line, test_data, COLS, row_index, outInitalRes_json, report) :#
     # compile the column stats sum & sum of sqrs & the count of almost-zero items
     for i, value in enumerate(row):
         val = float(value)
-        test_data['sum'][i]     += val;
-        test_data['sum_sqr'][i] += (val*val);
+        test_data['sum'][i]     += val
+        test_data['sum_sqr'][i] += (val*val)
         if abs(val) < ALMOST_ZERO: 
             test_data['zeros'][i] += 1
 
@@ -288,8 +288,8 @@ def fit_normalize(
 
     write_report(outInitalRes_json, report) 
     # close all open files here
-    file_in.close();
-    file_out.close();
+    file_in.close()
+    file_out.close()
     
     return test_data
 
