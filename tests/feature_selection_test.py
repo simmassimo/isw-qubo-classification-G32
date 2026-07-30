@@ -35,6 +35,7 @@ def test_feature_selection_must_be_roughly_20_percent(mock_csv, tmp_path):
     allowance = 1
     v = select_features(mock_csv, reduced_train_csv, reduced_test_csv, output_ottim_csv, output_json, "target", percSelected = perc, allowance = allowance)
 
-    print(sum(v) / len(v))  # Print the proportion of selected features for debugging
+    print(sum(v))  # Print the proportion of selected features for debugging
     # result should be roughly 20% of the total features +- allowance
-    assert (sum(v) / len(v)) >= 0.15 and (sum(v) / len(v)) <= 0.25, "Selected features should be roughly 20% of the total features."
+    accepted_nfeat = int(len(v) * perc)
+    assert (sum(v) >= accepted_nfeat - allowance) and (sum(v) <= accepted_nfeat + allowance), f"Selected features should be roughly {perc*100}% of the total features, but got {sum(v)} selected out of {len(v)}."
