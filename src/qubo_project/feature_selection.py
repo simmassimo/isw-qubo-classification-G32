@@ -504,4 +504,3 @@ def main():
 
 if __name__ == '__main__':  # uncomment these line to get standard behaviour
     main()
-main()
