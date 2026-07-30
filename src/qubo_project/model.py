@@ -1,7 +1,6 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import numpy as np
-from .preprocessing import ReadCSV, SeparateTarget
 import joblib
 import time
 import json
@@ -9,14 +8,24 @@ import argparse
 
 def PrepareData(csv_file: str, target_column: str):
     t = time.time()
-    csv = ReadCSV(csv_file)
+    # Read the CSV file
+    with open(csv_file, 'r') as f:
+        csv = [line.strip().split(',') for line in f.readlines()]
+    csv = np.array(csv)
     tnow = time.time()
-    x_data, y_data = SeparateTarget(csv, target_column)
-    y_header = y_data[0]  # Save header row
-    y_data = y_data[1:].astype(float)  # Exclude header row and convert to float
-    x_headers = x_data[0, :]  # Save header row
-    x_data = x_data[1:, :].astype(float)  # Exclude header row and convert to float
-    return x_data, y_data, x_headers, y_header, tnow - t
+    # Separate the target column from the parameters
+    headers = csv[0]
+    target_index = np.where(headers == target_column)[0][0] if target_column in headers else -1
+    if target_index == -1:
+        raise ValueError(f"Target column '{target_column}' not found in CSV headers.")
+    target = csv[:, target_index]
+    #remove the target column from the params including header
+    csv = np.delete(csv, target_index, axis=1)
+    x_header = csv[0, :]  # Save header row
+    x_data = csv[1:, :].astype(float)  # Exclude header row
+    y_header = target[0]  # Save header row
+    y_data = target[1:].astype(float)  # Exclude header row and convert to float
+    return x_data, y_data, x_header, y_header, tnow - t
 
 def train(
  classifier: str, # type of classifier to use
@@ -105,7 +114,6 @@ def predict(
             f.write(','.join(map(str, x_test[i])) + f',{y_pred[i]}\n')
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
 

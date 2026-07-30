@@ -161,32 +161,32 @@ with gr.Blocks(title="QUBO Classification") as demo:
             outputs=[fit_normalize_stats_output, fit_normalize_csv_output, fit_normalize_button],
         ).success( lambda: fit_normalize_output_accordion.update(visible=True) )
 
-        with gr.Tab("Feature Selection"):
-                fs_normalized_csv = gr.File(label="CSV to select features from", file_types=[".csv"])
-                with gr.Row():
-                    fs_output_train_csv = gr.Textbox(label="Name of output training dataset with reduced feat.", value="reduced_train_dataset.csv")
-                    fs_output_test_csv = gr.Textbox(label="Name of output test dataset with reduced features", value="reduced_test_dataset.csv")
-                fs_output_optim_csv = gr.Textbox(label="Name of output optimization data varying alpha", value="optimization_data.csv")
-                fs_output_json = gr.Textbox(label="Name of output statistics and data file", value="feature_selection_stats.json")
-                fs_target = gr.Textbox(label="Target column", value="target")
-                with gr.Accordion("Advanced", open=False):
-                    gr.Markdown("Adjust the minimum percentage of valid non-zero data for a column. Columns with less than this percentage will be removed during preprocessing.")
-                    fs_perc_test = gr.Slider(label=" % of test data with respect to the dataset size", minimum=0.0, maximum=1.0, value=0.05, step=0.01)
-                    fs_perc_selected = gr.Slider(label="percentage of features to select", minimum=0.0, maximum=1.0, value=0.05, step=0.01)
-                fs_allowance = gr.Number(label="Allowance of features to select", value=0.01, precision=4)
-                fs_seed = gr.Number(label="Seed", value=42, precision=0)
-                fs_alpha_computations = gr.Number(label="Max. n. of optimizations varying alpha", value=10, precision=0)
-                fs_button = gr.Button("Feature Selection")
-                with gr.Accordion("# Output", open=False) as fs_output_accordion:
-                    gr.Markdown("The output will include the normalized CSV file and a JSON file containing statistics about the feature selection process.")
-                    fs_stats_output = gr.JSON(label="Feature Selection statistics")
-                    fs_csv_output = gr.File(label="Normalized CSV")
-        
-                fs_button.click(
-                    fn=run_feature_selection,
-                    inputs=[fs_normalized_csv, fs_output_train_csv, fs_output_test_csv, fs_output_optim_csv, fs_output_json, fs_target, fs_perc_test, fs_perc_selected, fs_allowance, fs_seed, fs_alpha_computations],
-                    outputs=[fs_stats_output, fs_csv_output],
-                ).success( lambda: fs_output_accordion.update(visible=True) )
+    with gr.Tab("Feature Selection"):
+            fs_normalized_csv = gr.File(label="CSV to select features from", file_types=[".csv"])
+            with gr.Row():
+                fs_output_train_csv = gr.Textbox(label="Name of output training dataset with reduced feat.", value="reduced_train_dataset.csv")
+                fs_output_test_csv = gr.Textbox(label="Name of output test dataset with reduced features", value="reduced_test_dataset.csv")
+            fs_output_optim_csv = gr.Textbox(label="Name of output optimization data varying alpha", value="optimization_data.csv")
+            fs_output_json = gr.Textbox(label="Name of output statistics and data file", value="feature_selection_stats.json")
+            fs_target = gr.Textbox(label="Target column", value="target")
+            with gr.Accordion("Advanced", open=False):
+                gr.Markdown("Adjust the minimum percentage of valid non-zero data for a column. Columns with less than this percentage will be removed during preprocessing.")
+                fs_perc_test = gr.Slider(label=" % of test data with respect to the dataset size", minimum=0.0, maximum=1.0, value=0.05, step=0.01)
+                fs_perc_selected = gr.Slider(label="percentage of features to select", minimum=0.0, maximum=1.0, value=0.05, step=0.01)
+            fs_allowance = gr.Number(label="Allowance of features to select", value=0.01, precision=4)
+            fs_seed = gr.Number(label="Seed", value=42, precision=0)
+            fs_alpha_computations = gr.Number(label="Max. n. of optimizations varying alpha", value=10, precision=0)
+            fs_button = gr.Button("Feature Selection")
+            with gr.Accordion("# Output", open=False) as fs_output_accordion:
+                gr.Markdown("The output will include the normalized CSV file and a JSON file containing statistics about the feature selection process.")
+                fs_stats_output = gr.JSON(label="Feature Selection statistics")
+                fs_csv_output = gr.File(label="Normalized CSV")
+    
+            fs_button.click(
+                fn=lambda _ : print("Feature selection process started..."),  # Placeholder function
+                inputs=[fs_normalized_csv, fs_output_train_csv, fs_output_test_csv, fs_output_optim_csv, fs_output_json, fs_target, fs_perc_test, fs_perc_selected, fs_allowance, fs_seed, fs_alpha_computations],
+                outputs=[fs_stats_output, fs_csv_output],
+            ).success( lambda: fs_output_accordion.update(visible=True) )
 
 
 if __name__ == "__main__":
