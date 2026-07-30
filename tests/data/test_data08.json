@@ -1,0 +1,1 @@
+{"valid_row_count": 100, "bad_rows": [], "zeros": [], "means": [0, 0, 14497.75, 0, 0, 0], "sdevs": [0, 0, 9352.35149426187, 0, 0, 0], "warnings": ["stdev too close to zero, so eliminating col: policy_code"], "normalized_ok": true}

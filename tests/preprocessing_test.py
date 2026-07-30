@@ -1,103 +1,149 @@
-import pytest
-import pandas as pd
 import os
-from qubo_project.preprocessing import *
+import pytest
+
+from qubo_project.preprocessing import fit_normalize
+from utils import find_warning, get_filenames
+
+DATA_DIR = 'tests/data/'
+
 
 @pytest.fixture
-def mock_csv(tmp_path):
-    df = pd.DataFrame({
-        "feature1": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-        "feature2": [0.1, 0.9, 0.2, 0.8, 0.3, 0.7, 0.4, 0.6],
-        "target":   [0,   1,   0,   1,   0,   1,   0,   1],
-    })
-    path = tmp_path / "mock.csv"
-    df.to_csv(path, index=False)
-    return str(path)
+def fname(request):
+    # request.param is the dataset number, e.g. '01' -> input01.csv / normalize01.csv / ...
+    return get_filenames(DATA_DIR, request.param)
 
 
-def test_read_csv_returns_correct_shape(mock_csv):
-    csv = ReadCSV(mock_csv)
-    assert csv.shape[0] == 8  # 8 rows of data
-    assert csv.shape[1] == 3  # 2 features + 1 target column
+# input: file not there
+# assert: fatal error 'Could not open/read file'
+@pytest.mark.parametrize('fname', ['00'], indirect=True)
+def test_fit_normalize_with_missing_file_raises_error(fname):
+    with pytest.raises(FileNotFoundError, match="Could not open/read file"):
+        fit_normalize(
+            fname['input'],
+            'target',
+            fname['normalize'],
+            fname['report'],
+            0.05
+        )
 
-def test_read_csv_with_missing_file_raises_error(tmp_path):
-    missing_file_path = tmp_path / "non_existent.csv"
-    with pytest.raises(FileNotFoundError):
-        ReadCSV(str(missing_file_path))
 
-def test_read_csv_with_empty_file_raises_error(tmp_path):
-    empty_file_path = tmp_path / "empty.csv"
-    empty_file_path.touch()  # Create an empty file
-    with pytest.raises(ValueError):
-        ReadCSV(str(empty_file_path))
+# input: BAD alfanumeric char in data row 1
+# assert: warning 'ignoring bad row' is made
+@pytest.mark.parametrize('fname', ['01'], indirect=True)
+def test_fit_normalize_with_bad_row_raises_warning(fname):
+    test_data = fit_normalize(
+        fname['input'],
+        'target',
+        fname['normalize'],
+        fname['report'],
+        0.05 )
 
-def test_read_csv_with_malformed_csv_raises_error(tmp_path):
-    malformed_csv_path = tmp_path / "malformed.csv"
-    with open(malformed_csv_path, 'w') as f:
-        f.write("feature1,feature2,target\n")
-        f.write("1.0,0.1,0\n")
-        f.write("2.0,0.9\n")  # Missing target value
-        f.write("3.0,0.2,0\n")
-    
-    with pytest.raises(ValueError):
-        ReadCSV(str(malformed_csv_path))
+    assert find_warning(test_data['warnings'], 'ignoring bad row')
 
-def test_read_csv_with_non_numeric_data_raises_error(tmp_path):
-    non_numeric_csv_path = tmp_path / "non_numeric.csv"
-    with open(non_numeric_csv_path, 'w') as f:
-        f.write("feature1,feature2,target\n")
-        f.write("1.0,0.1,0\n")
-        f.write("2.0,abc,1\n")  # Non-numeric value in feature2
-        f.write("3.0,0.2,0\n")
-    
-    with pytest.raises(ValueError):
-        ReadCSV(str(non_numeric_csv_path))
 
-def test_separate_target_with_missing_column_raises_error(mock_csv):
-    csv = ReadCSV(mock_csv)
-    with pytest.raises(ValueError):
-        SeparateTarget(csv, "non_existent_target")
+# input: EMPTY field in data row 1
+# assert: warning 'ignoring bad row' is made
+@pytest.mark.parametrize('fname', ['02'], indirect=True)
+def test_fit_normalize_with_empty_field_raises_warning(fname):
+    test_data = fit_normalize(
+        fname['input'],
+        'target',
+        fname['normalize'],
+        fname['report'],
+        0.05 )
 
-def test_separate_target_returns_correct_shapes(mock_csv):
-    csv = ReadCSV(mock_csv)
-    x_data, y_data = SeparateTarget(csv, "target")
-    assert x_data.shape[0] == 8  # 8 rows of data
-    assert x_data.shape[1] == 2  # 2 features
-    assert y_data.shape[0] == 8  # 8 rows of target data
-    assert y_data.shape[1] == 1  # 1 target column
+    assert find_warning(test_data['warnings'], 'ignoring bad row')
 
-def test_separate_target_with_non_numeric_target_raises_error(tmp_path):
-    non_numeric_target_csv_path = tmp_path / "non_numeric_target.csv"
-    with open(non_numeric_target_csv_path, 'w') as f:
-        f.write("feature1,feature2,target\n")
-        f.write("1.0,0.1,0\n")
-        f.write("2.0,0.9,abc\n")  # Non-numeric value in target
-        f.write("3.0,0.2,0\n")
-    
-    csv = ReadCSV(str(non_numeric_target_csv_path))
-    with pytest.raises(ValueError):
-        SeparateTarget(csv, "target")
 
-def test_normalize_columns_with_zero_variance():
-    data = np.array([[1.0, 2.0, 3.0],
-                     [1.0, 5.0, 6.0],
-                     [1.0, 8.0, 9.0]])
-    normalized_data = NormalizeColumns(data)
-    # The first column has zero variance and should be all zeros after normalization
-    assert np.all(normalized_data[:, 0] == 0)
-    # The other columns should be normalized to have mean 0 and std 1
-    assert np.isclose(np.mean(normalized_data[:, 1]), 0)
-    assert np.isclose(np.std(normalized_data[:, 1]), 1)
-    assert np.isclose(np.mean(normalized_data[:, 2]), 0)
-    assert np.isclose(np.std(normalized_data[:, 2]), 1)
+# input: BAD field in header
+# assert: fatal error 'header has bad format'
+@pytest.mark.parametrize('fname', ['03'], indirect=True)
+def test_fit_normalize_with_bad_header_raises_error(fname):
+    with pytest.raises(ValueError, match="bad header: no field found labelled target"):
+        fit_normalize(
+            fname['input'],
+            'target',
+            fname['normalize'],
+            fname['report'],
+            0.05 )
 
-def test_remove_almost_zero_columns():
-    data = np.array([
-        ["feature1", "feature2", "feature3"],
-        [1.0, 0.00001, 3.0],
-        [1.0, 0.00002, 6.0],
-        [1.0, 0.00003, 9.0]
-    ])
-    filtered_data, n_features, filtered_names = RemoveNullOrLowVarianceColumns(data, minPercValid=0.5, variance_threshold=1e-4)
-    # The second column should be removed due to low variance
-    assert filtered_data.shape[1] == 2
+
+# input: EMPTY field in header
+# assert: fatal error 'header has bad format'
+@pytest.mark.parametrize('fname', ['04'], indirect=True)
+def test_fit_normalize_with_empty_header_raises_error(fname):
+    with pytest.raises(ValueError, match="header has bad format"):
+        fit_normalize(
+            fname['input'],
+            'target',
+            fname['normalize'],
+            fname['report'],
+            0.05 )
+
+
+# input: data set has less than 3 columns (assuming no id column)
+# assert: fatal error 'header has bad format'
+@pytest.mark.parametrize('fname', ['05'], indirect=True)
+def test_fit_normalize_with_too_few_columns_raises_error(fname):
+    with pytest.raises(ValueError, match="header has bad format"):
+        fit_normalize(
+            fname['input'],
+            'target',
+            fname['normalize'],
+            fname['report'],
+            0.05
+        )
+
+
+# input: Too few data rows
+# assert: fatal error 'not enough valid numeric rows: '
+@pytest.mark.parametrize('fname', ['06'], indirect=True)
+def test_fit_normalize_with_too_few_rows_raises_error(fname):
+    with pytest.raises(ValueError, match="not enough valid numeric rows: "):
+        fit_normalize(
+            fname['input'],
+            'target',
+            fname['normalize'],
+            fname['report'],
+            0.05 )
+
+
+# input: BAD column standard deviation
+# assert: warnings: 'stdev too close to zero, so eliminating col: '
+@pytest.mark.parametrize('fname', ['07'], indirect=True)
+def test_fit_normalize_with_bad_column_stdev_raises_warning(fname):
+    test_data = fit_normalize(
+        fname['input'],
+        'target',
+        fname['normalize'],
+        fname['report'],
+        0.05 )
+
+    assert find_warning(test_data['warnings'], 'stdev too close to zero, so eliminating col: ')
+
+
+# input: normalized.csv not created
+# assert: normalize file exists after fit_normalize runs
+@pytest.mark.parametrize('fname', ['08'], indirect=True)
+def test_fit_normalize_creates_normalized_file(fname):
+    fit_normalize(
+        fname['input'],
+        'target',
+        fname['normalize'],
+        fname['report'],
+        0.05 )
+
+    assert os.path.exists(fname['normalize'])
+
+
+# input: target column must contain only 0 or 1
+# assert: 'target_column contains bad data'
+@pytest.mark.parametrize('fname', ['09'], indirect=True)
+def test_fit_normalize_with_bad_target_column_format_raises_error(fname):
+    with pytest.raises(ValueError, match="target_column contains bad value"):
+        fit_normalize(
+            fname['input'],
+            'target',
+            fname['normalize'],
+            fname['report'],
+            0.05 )

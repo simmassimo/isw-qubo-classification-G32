@@ -1,114 +1,297 @@
-import numpy as np
+import re
+import math
+import json
 import time
 
-def ReadCSV(input_csv: str):
-    try:
-        with open(input_csv, 'r') as f:
-            csv = [line.strip().split(',') for line in f.readlines()]
-        csv = np.array(csv)
-        return csv
-    except Exception as e:
-        print(f"Error reading CSV: {e}")
-        return []
+ALMOST_ZERO = 1e-10 # Never reassigned in this module
 
-def SeparateTarget(csv, target_column: str):
-    headers = csv[0]
-    target_index = np.where(headers == target_column)[0][0] if target_column in headers else -1
-    if target_index == -1:
-        raise ValueError(f"Target column '{target_column}' not found in CSV headers.")
-    target = csv[:, target_index]
-    #remove the target column from the params including header
-    params = np.delete(csv, target_index, axis=1)
-    return params, target
+def write_report(outInitalRes_json, report) :
+    try:
+        file = open(outInitalRes_json, 'w')
+    except OSError:
+        print( 'CATASTROPHIC ERROR cannot open/write outInitalRes_json: ' + jsonfile)
+
+    json.dump(report, file )
+    file.close();
+
+def update_dropped_feature_names( report, arr_heads, arr_zeros ) :
+    for i, value in enumerate(arr_heads):
+        if arr_zeros[i] == 1 :
+            report['dropped_feature_names'].append(arr_heads[i])
+
+def update_n_kept_features( report, arr_zeros ) :
+    count = 0
+    for value in arr_zeros:
+        if value == 0 : count += 1
+    report['n_kept_features'] = count 
+
+def write_arr( file, arr ) :
+    out_line = ','.join(arr) + '\n'
+    file.write( out_line )
+
+def bad_header_regex( line ) :
+    pat_header_item = '[ ]*[^,]+[ ]*'
+    pat_header_row = '^(' + pat_header_item + ',){2,}' + pat_header_item +'$'
+    pattern = re.compile( pat_header_row );
     
+    return None == re.match(pattern, line)
+
+def bad_row_regex( line, COLS ) : # pattern - not yet allowing for 1.2e-5 engineering notation
+    pat_numeric_item = '[ ]*-?[0-9]+(\.[0-9]+)?[ ]*'
+    pat_numeric_row = '^(' + pat_numeric_item + ',){' + str(COLS-1) + '}' + pat_numeric_item +'$'
+    pattern = re.compile( pat_numeric_row );
     
-
-def AlmostZero(x, tol=1e-4):
-    return abs(x) < tol
-
-def NonAlmostZero(x, tol=1e-4):
-    return not AlmostZero(x, tol)
-
-def CountNonAlmostZero(arr, tol=1e-4):
-    return sum(1 for x in arr if NonAlmostZero(x, tol))
-
-def CountAlmostZero(arr, tol=1e-4):
-    return sum(1 for x in arr if AlmostZero(x, tol))
-
-def RemoveNullOrLowVarianceColumns(params, minPercValid: float, variance_threshold: float): 
-    params_h = params[0]  # header row
-    params_v = params[1:].astype(float)   
-    filtered_params_names = []
-    delete_mask = np.zeros(params_v.shape[1], dtype=bool)
-    for icol, col in enumerate(params_v.T):
-        delete_mask[icol] = CountAlmostZero(col, tol=variance_threshold) / len(col) >= minPercValid
-    params_filtered = params[:, ~delete_mask]
-    filtered_params_names = params_h[delete_mask]
-    return params_filtered, params_filtered.shape[1] - 1, filtered_params_names
+    return None == re.match(pattern, line)
 
 
-def NormalizeColumns(params):
-    params_h = params[0]
-    params_v = params[1:].astype(float)
-    #implement z-score normalization
-    normalized_v = (params_v - np.mean(params_v, axis=0)) / np.std(params_v, axis=0)
-    return np.vstack([params_h, normalized_v])
+# zeros array will mark columns to exclude -> boolean 0 or 1
+def compute_excluded_columns(test_data, minPercValid):
+    limit = (1.0 - minPercValid)*test_data['valid_row_count']    # e.g 95%
+    for i, val in enumerate(test_data['zeros']):
+        if   limit <= val : test_data['zeros'][i] = 1 # too many zeros, exclude
+        else:               test_data['zeros'][i] = 0 # okay
 
-def WriteCSV(normalized_csv: str, params, target):
-    try:
-        with open(normalized_csv, 'w') as f:
-            for row in params:
-                f.write(','.join(map(str, row)) + '\n')
-            f.write(','.join(map(str, target)) + '\n')
-    except Exception as e:
-        print(f"Error writing to CSV: {e}")
 
-def WriteJSON(outInitalRes_json: str, json_stats):
-    try:
-        with open(outInitalRes_json, 'w') as f:
-            import json
-            json.dump(json_stats, f, indent=4)
-    except Exception as e:
-        print(f"Error writing to JSON: {e}")
+def compute_stats(test_data, sd_threshold ):
+    # calc stats of sample
+    # mean = sum / n
+    # sd^2 = (sum_sqr - sum*sum/n)/(n-1)
+    # sd = sqrt (sd^2)
+    for i, value in enumerate(test_data['zeros']) :
+        if value == 0  and i != test_data['target_index'] and i != test_data['id_index']:
+            # sample mean
+            mean = test_data['sum'][i] / test_data['valid_row_count']
+            # sample sd
+            sd   = math.sqrt( (test_data['sum_sqr'][i] - mean*test_data['sum'][i]) / (test_data['valid_row_count']-1) ) 
+            if sd < sd_threshold :  # then bad column, so re--classify column as almost-zero
+                test_data['warnings'].append('stdev too close to zero, so eliminating col: ' + test_data['header'][i])
+                test_data['zeros'][i] = 1
+            else:
+                test_data['means'][i] = mean
+                test_data['sdevs'][i] = sd
 
+# write out the original header omitting eliminated columns
+# and forcing first cols to be 'id' 'target'  - omit 'id' if None
+def write_header( file_out, test_data, line ) :
+    row_out = []
+
+    id_index  = test_data['id_index']
+    if(id_index != None ):
+        ### row_out.append(test_data['header'][id_index])
+        test_data['zeros'][id_index] = 1 # exclude as data later
+        
+    indx  = test_data['target_index']
+    row_out.append(test_data['header'][indx])
+    test_data['zeros'][indx] = 1 # exclude as data later
+
+    for i, value in enumerate(test_data['header']) :
+        if test_data['zeros'][i] == 0:
+            row_out.append(value) #copy
+    write_arr( file_out, row_out )
+
+
+
+def normalize_and_write_row(file_out, test_data, line, row_index) :
+    row_out = []
+    if not row_index in test_data['bad_rows'] : # skip bad rows
+        row_in = line.strip().split(',')
+        
+        ###if(test_data['id_index'] != None ):
+        ###   row_out.append(row_in[test_data['id_index']])
+        row_out.append(row_in[test_data['target_index']])
+        for i, value in enumerate(row_in) :
+            if test_data['zeros'][i] == 0:
+                    # normalise: 1 subtract mean, 2 divide by sd
+                    val = float(value)
+                    val = (val - test_data['means'][i]) / test_data['sdevs'][i]
+                    row_out.append(str(val))
+        write_arr( file_out, row_out )
+
+###############################################################################################
+def process_header ( line, test_data, target_column, outInitalRes_json, report): # returns test_data
+
+    # check header has no blanks etc
+    if bad_header_regex( line ):
+        write_report(outInitalRes_json, report)
+        raise ValueError('header has bad format')
+    
+    # create array of column header labels
+    test_data['header'] = line.strip().split(',')
+    
+    # assign target_index using target_column name
+    if not target_column in test_data['header'] : 
+        write_report(outInitalRes_json, report)
+        raise ValueError('bad header: no field found labelled ' + target_column )
+
+    test_data['target_index'] = test_data['header'].index( target_column );
+    
+    COLS = len(test_data['header'])
+    # assign id_index if present
+    if not 'id' in test_data['header'] : 
+        test_data['id_index'] = None;
+        min_cols = 2
+    else:
+        test_data['id_index'] = test_data['header'].index( 'id' );
+        min_cols = 3
+    
+    if COLS < min_cols:
+        write_report(outInitalRes_json, report)
+        raise ValueError('bad header: got ' + str(COLS) + ' columns should be 3 or more')
+
+###############################################################################################
+def process_row( line, test_data, COLS, row_index, outInitalRes_json, report) :# returns test_data
+    # skip rows that fail regexp - reporting row_index to stderr
+    if bad_row_regex( line, COLS ):
+        test_data['warnings'].append('ignoring bad row: ' + str(row_index))
+        test_data['bad_rows'].append(row_index)
+        return 
+        
+    # below can assume valid number of columns and valid numeric items
+    row = line.strip().split(',')
+    
+    target_index = test_data['target_index']
+    target_val = row[target_index]
+    if (target_val != '1') and (target_val != '0'):
+        write_report(outInitalRes_json, report)
+        raise ValueError('target_column contains bad value ' + target_val + ' at row: ' + str(row_index))
+
+    test_data['valid_row_count'] += 1
+    
+    # compile the column stats sum & sum of sqrs & the count of almost-zero items
+    for i, value in enumerate(row):
+        val = float(value)
+        test_data['sum'][i]     += val;
+        test_data['sum_sqr'][i] += (val*val);
+        if abs(val) < ALMOST_ZERO: 
+            test_data['zeros'][i] += 1
+
+    
+###############################################################################################
 def fit_normalize(
- input_csv: str, # Input dataset name
- target_column: str, # column name of target
- normalized_csv: str, # Name of output normalized data set
- outInitalRes_json: str, # Name of output statistics and data file
- minPercValid: float = 0.05, # Minimum % of valid non-zero data for a column
- variance_threshold: float = 1e-4, # Minimum variance threshold for a column
+    input_csv: str = 'input.csv',           # Input dataset name
+    target_column: str = 'target',          # column name of target - allows target to head any column it likes
+    normalized_csv: str = 'normalize.csv',  # Name of output normalized data set
+    outInitalRes_json: str = 'report.json', # Name of output statistics and data file
+    minPercValid: float = 0.05,             # Minimum % of valid non-zero data for a column
 ):
-    json_stats = {}
-    t = time.time()
-    csv = ReadCSV(input_csv)
-    size = csv.shape[0]
-    n_ftrs_raw = csv.shape[1] - 1  # Exclude target column
-    tnow = time.time()
-    json_stats["dataset_input_time"] = round(tnow - t,2)
-    json_stats["dataset_size"] = size
-    print(f"Read CSV with {size} rows and {n_ftrs_raw} features")
-    t = time.time()
-    params,target = SeparateTarget(csv,target_column)
-    json_stats["n_input_features"] = n_ftrs_raw
-    params, n_ftrs_clean, rmvd_ftrs = RemoveNullOrLowVarianceColumns(params,minPercValid, variance_threshold)
-    print(f"Removed {n_ftrs_raw - n_ftrs_clean} features with low variance or too many near-zero values")
-    json_stats["n_kept_features"] = n_ftrs_clean
-    json_stats["dropped_features_names"] = rmvd_ftrs
-    params = NormalizeColumns(params)
-    tnow = time.time()
-    json_stats["dataset_processing_time"] = round(tnow - t,2)
-    WriteCSV(normalized_csv, params, target)
-    WriteJSON(outInitalRes_json, json_stats)
-    return params, target, json_stats
+
+    report =     {
+        "n_input_features": 0,  # For now
+        "n_kept_features": 0,   # These will also include id & target cols
+        "dataset_size": 0,      # nb rows of input is this total_row_count
+        "dataset_input_time": 0.0,      # secs
+        "dataset_processing_time": 0.0, # secs
+        "dropped_feature_names": [] # e.g. ["feature_1", "feature_20"]
+    }
+    
+
+    test_data = {    
+        "valid_row_count":  0,
+        "bad_rows": [],         # row indices
+        "means": [],            # ...
+        "sdevs": [],            # ...
+        "warnings": [],
+        "header": [],
+        "sum": [],
+        "sum_sqr": [],
+        "zeros": []#,
+        #"error": ''
+    }
+
+    # check for invalid argument
+    if minPercValid < 0.0 or 1.0 < minPercValid :
+        write_report(outInitalRes_json, report)
+        raise ValueError('minPercValid: ' + str(minPercValid) + ' not in range [0,1]')
+
+    # check for invalid argument
+    if len(target_column) < 1:
+        write_report(outInitalRes_json, report)
+        raise ValueError('target_column: parameter is blank')
+
+    try:
+        file_in = open(input_csv, 'r')
+    except OSError:      
+        write_report(outInitalRes_json, report)
+        raise FileNotFoundError( 'Could not open/read file: ' + input_csv )
+        
+    try:  # lock the file, so any error comes now, not after much processing
+        file_out = open(normalized_csv, 'w')
+    except OSError:
+        file_in.close()
+        write_report(outInitalRes_json, report)
+        raise FileNotFoundError( 'Could not open/write file: ' + normalized_csv )
+
+    with file_in:
+
+        # start TIMER
+        t_start = time.time()
+        
+        # READ HEADER
+        line = file_in.readline()
+        process_header ( line, test_data, target_column, outInitalRes_json, report)
+        
+        COLS = len(test_data['header'])
+        report['n_input_features'] = COLS # includes target and id fields
+
+        # first initialize the arrays to 0
+        test_data['sum']     = [0] * COLS
+        test_data['sum_sqr'] = [0] * COLS
+        test_data['zeros']   = [0] * COLS
+        test_data['means']   = [0] * COLS 
+        test_data['sdevs']   = [0] * COLS
+        
+        row_index = 1
+                    
+        for line in file_in :      # FIRST PASS of data rows
+
+            process_row( line, test_data, COLS, row_index, outInitalRes_json, report)
+            row_index += 1
+
+        # stop TIMER
+        t_end = time.time()
+        report["dataset_input_time"] = round(t_end - t_start,2)
+        
+        report['dataset_size'] = row_index -1 # omitting header_row but not bad rows
+        
+        if test_data['valid_row_count'] < 2:  
+            write_report(outInitalRes_json, report)
+            raise ValueError('not enough valid numeric rows: ' + str(test_data['valid_row_count']))
 
 
-p,t,s = fit_normalize(
-    input_csv="data/trial_dataset_ISW.csv",
-    target_column="target",
-    normalized_csv="data/trial_dataset_ISW_normalized.csv",
-    outInitalRes_json="data/trial_dataset_ISW_stats.json",
-    minPercValid=0.05,
-    variance_threshold=1e-6)
+        # re-start TIMER
+        t_start = time.time()
 
-print(s)
+
+        compute_excluded_columns(test_data, minPercValid)
+        # now test_data['zeros'] no longer contain a count but 'boolean'
+        # value 1 means exclude this column from the output, 0 not
+        
+        compute_stats(test_data, ALMOST_ZERO )
+                   
+        update_dropped_feature_names( report, test_data['header'], test_data['zeros'] )
+        update_n_kept_features( report, test_data['zeros'] )
+        
+        # REWIND the file in order iterate all the lines again.
+        file_in.seek(0) 
+        line = file_in.readline() # skip header on first line
+        
+        write_header( file_out, test_data, line )
+
+        row_index = 1
+        for line in file_in :      # SECOND PASS of data rows
+            normalize_and_write_row( file_out, test_data, line, row_index)
+            row_index += 1
+        
+        # stop TIMER
+        t_end = time.time()
+        report["dataset_processing_time"] = round(t_end - t_start,2)
+
+    write_report(outInitalRes_json, report) 
+    # close all open files here
+    file_in.close();
+    file_out.close();
+    
+    return test_data
+
+#fit_normalize('data/trial_dataset_ISW.csv')
+fit_normalize('data/output.csv')
