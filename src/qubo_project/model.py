@@ -1,20 +1,22 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import numpy as np
-from ..preprocessing import ReadCSV, SeparateTarget
+from .preprocessing import ReadCSV, SeparateTarget
 import joblib
 import time
 import json
+import argparse
 
 def PrepareData(csv_file: str, target_column: str):
     t = time.time()
     csv = ReadCSV(csv_file)
     tnow = time.time()
     x_data, y_data = SeparateTarget(csv, target_column)
+    y_header = y_data[0]  # Save header row
+    y_data = y_data[1:].astype(float)  # Exclude header row and convert to float
     x_headers = x_data[0, :]  # Save header row
     x_data = x_data[1:, :].astype(float)  # Exclude header row and convert to float
-    y_data = y_data[1:, :].astype(float)  # Exclude header row and convert to float
-    return x_data, y_data, x_headers, tnow - t
+    return x_data, y_data, x_headers, y_header, tnow - t
 
 def train(
  classifier: str, # type of classifier to use
@@ -25,11 +27,11 @@ def train(
  seed: int = 42,
 ):
     classifier = classifier.lower().strip()
-    x_train, y_train, x_headers, t_in = PrepareData(reducedTrain_csv, target_column)
+    x_train, y_train, x_headers, y_header, t_in = PrepareData(reducedTrain_csv, target_column)
     if x_train is None or y_train is None:
         raise ValueError("Training data could not be prepared. Check the input CSV and target column.")
     if classifier in ["random_forest", "rf", "randomforest", "random forest"]:
-        json_stats["classifier"] = "random_forest"
+        classifier = "random_forest"
         clf = RandomForestClassifier(n_estimators=100, random_state=seed)
     else:
         raise ValueError("Unsupported classifier type")
@@ -39,6 +41,7 @@ def train(
     # Saving classifier using joblib
     joblib.dump(clf, f'{model_path}')
     json_stats = {
+        "classifier": classifier,
         "seed": seed,
         "model_path": model_path,
         "training_dataset": reducedTrain_csv,
@@ -58,7 +61,7 @@ def predict(
  predictions_csv: str, # Output predictions
  classif_stats_json: str, # File with classification stats
 ):
-    x_test, y_test, x_headers, _ = PrepareData(reduced_Test_csv, target_column)
+    x_test, y_test, x_headers, y_header, t_in = PrepareData(reduced_Test_csv, target_column)
 
     # Load the trained classifier
     clf = joblib.load(f'{model_path}')
@@ -100,3 +103,41 @@ def predict(
         f.write(','.join(map(str, x_headers)) + ',prediction\n')
         for i in range(len(y_pred)):
             f.write(','.join(map(str, x_test[i])) + f',{y_pred[i]}\n')
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    sub_train = subparsers.add_parser("train", help="Train a classifier")
+    sub_train.add_argument("--classifier", type=str, required=True, help="Type of classifier to use (e.g., 'random_forest')")
+    sub_train.add_argument("--in-reduced", type=str, required=True, help="Path to the training dataset CSV file")
+    sub_train.add_argument("--target_column", type=str, required=True, help="Name of the target column in the dataset")
+    sub_train.add_argument("--out-model", type=str, required=True, help="Path to save/load the trained classifier")
+    sub_train.add_argument("--out-metrics", type=str, required=True, help="Path to save training statistics JSON file")
+
+    sub_predict = subparsers.add_parser("predict", help="Make predictions using a trained classifier")
+    sub_predict.add_argument("--input-testset", type=str, required=True, help="Path to the test dataset CSV file")
+    sub_predict.add_argument("--target", type=str, required=True, help="Name of the target column in the dataset")
+    sub_predict.add_argument("--model", type=str, required=True, help="Path to load the trained classifier")
+    sub_predict.add_argument("--out-predictions", type=str, required=True, help="Path to save predictions CSV file")
+    sub_predict.add_argument("--out-stats", type=str, required=True, help="Path to save classification statistics JSON file")
+
+    args = parser.parse_args()
+
+    if args.command == "train":
+        train(
+            classifier=args.classifier,
+            reducedTrain_csv=args.in_reduced,
+            target_column=args.target_column,
+            model_path=args.out_model,
+            metrics_json=args.out_metrics
+        )
+    elif args.command == "predict":
+        predict(
+            reduced_Test_csv=args.input_testset,
+            target_column=args.target,
+            model_path=args.model,
+            predictions_csv=args.out_predictions,
+            classif_stats_json=args.out_stats
+        )
