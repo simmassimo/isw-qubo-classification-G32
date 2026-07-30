@@ -4,7 +4,7 @@ import pytest
 from qubo_project.preprocessing import fit_normalize
 from utils import find_warning, get_filenames
 
-DATA_DIR = 'tests/data/'
+DATA_DIR = 'tests/test_csv/'
 
 
 @pytest.fixture
