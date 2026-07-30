@@ -452,7 +452,9 @@ def select_features(
     file_train.close()
     file_out.close()
     write_report(output_json, report)
-
+    
+    # print(selected_cols.astype(int))
+    return selected_cols.astype(int)
 ###########################################################
 
 def main():
@@ -502,3 +504,4 @@ def main():
 
 if __name__ == '__main__':  # uncomment these line to get standard behaviour
     main()
+main()
