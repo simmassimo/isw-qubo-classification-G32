@@ -1,5 +1,7 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 import numpy as np
 import joblib
 import time
@@ -41,7 +43,13 @@ def train(
         raise ValueError("Training data could not be prepared. Check the input CSV and target column.")
     if classifier in ["random_forest", "rf", "randomforest", "random forest"]:
         classifier = "random_forest"
-        clf = RandomForestClassifier(n_estimators=100, random_state=seed)
+        clf = RandomForestClassifier(n_estimators=100, random_state=seed, class_weight="balanced")
+    elif classifier in ["svm", "support_vector_machine", "support vector machine"]:
+        classifier = "svm"
+        clf = SVC(probability=True, random_state=seed, class_weight="balanced")
+    elif classifier in ["logistic_regression", "logistic regression", "logistic"]:
+        classifier = "logistic_regression"
+        clf = LogisticRegression(random_state=seed, class_weight="balanced")
     else:
         raise ValueError("Unsupported classifier type")
     t = time.time()
@@ -72,7 +80,7 @@ def predict(
 ):
     x_test, y_test, x_headers, y_header, t_in = PrepareData(reduced_Test_csv, target_column)
 
-    # Load the trained classifier
+    # load the classifier
     clf = joblib.load(f'{model_path}')
     if clf is None:
         raise ValueError("Classifier not found. Are you sure the model was saved correctly?")
@@ -80,7 +88,13 @@ def predict(
     # Make predictions
     y_pred = clf.predict(x_test.astype(float))
 
-    # Save classification statistics
+    # grabbing probabilities scores for roc auc calculation
+    if hasattr(clf, "predict_proba"):
+        y_score = clf.predict_proba(x_test.astype(float))[:, 1]
+    else:
+        y_score = clf.decision_function(x_test.astype(float))
+
+    # save stats
     json_stats = {
         "classifier": clf.__class__.__name__,
         "n_samples": x_test.shape[0],
@@ -98,7 +112,7 @@ def predict(
             "f1_score": f1_score(y_test, y_pred, pos_label=1),
             "support": int(np.sum(y_test == 1)),
         },
-        "roc_auc": roc_auc_score(y_test, y_pred),
+        "roc_auc": roc_auc_score(y_test, y_score),
         "confusion_matrix": {
             "labels": [0, 1],
             "matrix": confusion_matrix(y_test, y_pred).tolist(),
@@ -113,6 +127,7 @@ def predict(
         for i in range(len(y_pred)):
             f.write(','.join(map(str, x_test[i])) + f',{y_pred[i]}\n')
 
+# command line interface
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)

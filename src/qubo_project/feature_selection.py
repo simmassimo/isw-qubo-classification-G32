@@ -453,7 +453,7 @@ def select_features(
     write_report(output_json, report)
 
     
-select_features(
+"""select_features(
  'normalize.csv',
  'reducedTrain.csv',
  'reducedTest.csv',
@@ -465,4 +465,4 @@ select_features(
  1,   # allowance
  42,  # seed
  100  # alpha_computations
-)
+)"""
