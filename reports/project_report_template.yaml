@@ -19,6 +19,191 @@ submission_date: "2026-07-30"
 students:
   - student_id: "60/61/65985"        #Matricola completa
     role_in_project:
+      - "classification"
+      - "testing"
+      - "documentation"
+      - "gui"
+  - student_id: "60/61/65904"        #Matricola completa
+    role_in_project:
+      - "preprocessing"
+      - "feature_selection"
+      - "testing"
+      - "documentation"
+
+team_work:
+  work_distribution:
+    design_percent: "50% - 50%"
+    preprocessing_percent: "30% - 70%"
+    qubo_feature_selection_percent: "10% -90%"
+    classification_percent: "90% -10%"
+    testing_percent: "50% - 50%"
+    gui_percent: "90% -10%"
+    documentation_percent: "50% - 50%"
+  collaboration_mode:
+    # valori suggeriti: "pair_programming", "divisione_per_moduli", "mista"
+    type: "divisione_per_moduli"
+    notes: null
+    remote_collaboration_perc: 100   # Percentuale di lavoro in call (0-100)
+  estimated_total_hours:
+    student_1_hours: 56
+    student_2_hours: 150
+    total_group_hours: 206
+
+initial_context:
+  prior_experience:
+    # valori da usare: "none", "basic", "intermediate", "advanced"
+    python: intermediate
+    pandas_numpy: none
+    scikit_learn: none
+    machine_learning: basic
+    classification: none
+    feature_selection: none
+    optimization: basic
+    QUBO: none
+    git_github: basic
+  initial_confidence:
+    # scala 1-5: 1 = per nulla sicuri, 5 = molto sicuri
+    python_project_development: 3
+    qubo_formulation: 1
+    machine_learning: 2
+    debugging: 3
+    validating_llm_outputs: 1
+
+design_choices:
+  correlation_computation: spearman's ranking
+  QUBO_optimization_algorithm:
+    algorithm_name: simulated annealing
+    library_used: openjij
+    reason_for_choice: best true open source library
+  classification_algorithm:
+    algorithm_name: random forest, support vector machine, logistical regression
+    library_used: sklearn
+    reason_for_choice: most used ML library
+  gui_development: gradio
+  problems_encountered:
+    - problem: null
+      solution: null
+  notes:
+
+llm_usage_summary:
+  # Non inserire prompt o risposte complete: saranno raccolti separatamente.
+  llms_used:    # Inserire un record per ogni LLM usato
+    - name: Copilot
+      version: GPT-5
+      paid_subscription: null
+      usage_level_0_to_3:   # valori da 0 (non usato) a 3 (usatissimo)     
+        value: 2   
+  phases_where_llm_was_used:
+    requirements_understanding:
+      usage_level_0_to_3: 1
+      usefulness_1_to_5: 4
+      notes: null
+    preprocessing:
+      usage_level_0_to_3: 2
+      usefulness_1_to_5: 5
+      notes: null
+    qubo_formulation:
+      usage_level_0_to_3: 2
+      usefulness_1_to_5: 4
+      notes: null
+    optimizer_selection:
+      usage_level_0_to_3: 2
+      usefulness_1_to_5: 4
+      notes: null
+    classifier_selection:
+      usage_level_0_to_3: 1
+      usefulness_1_to_5: 3
+      notes: null
+    debugging:
+      usage_level_0_to_3: 1
+      usefulness_1_to_5: 5
+      notes: null
+    testing:
+      usage_level_0_to_3: 0
+      usefulness_1_to_5: null
+      notes: null
+    documentation:
+      usage_level_0_to_3: 0
+      usefulness_1_to_5: null
+      notes: null
+    gui:
+      usage_level_0_to_3: 0
+      usefulness_1_to_5: null
+      notes: null
+  estimated_llm_contribution:
+    percent_code_generated_or_suggested_by_llm: 5
+    percent_code_accepted_without_major_changes: 0
+    percent_documentation_generated_or_suggested_by_llm: 0
+  human_verification:
+    # descrivere come il gruppo ha controllato gli output dell'LLM. (yes/partially/no)
+    methods_used:
+      - code_execution: yes
+      - automated_tests: no
+      - critical_reading: yes
+      - comparison_with_other_llm: no
+    notes: null
+  llm_misleading_outputs:
+    encountered: no  # (yes/partially/no)
+    examples_count: null   # number of cases
+    categories:     # rispondere con: yes/partially/no
+      wrong_python_code: no  
+      wrong_library_usage: no
+      wrong_qubo_formulation: no
+      wrong_ml_methodology: no
+      hallucinated_api_or_function: no
+      other: null      # indicare quale/quali
+    impact_on_project: 0   # valori da 0 (nessuno) a 3 (fortissimo)     
+  llm_overall_assessment:  
+    productivity_improvement_1_to_5: 3
+    learning_support_1_to_5: 5
+    risk_of_overreliance_1_to_5: 2
+    trust_in_llm_outputs_1_to_5: 3
+    would_use_again: maybe   # (yes/maybe/no)
+    notes: null
+  most_useful_project_activity: qubo feature selection
+  most_difficult_project_activity: documentation
+  main_lessons_learned:   # descrivere con una frase per ogni lezione appresa
+    - LLM documentation must be automated next time
+  main_problems:
+    - problem: null
+      severity_1_to_5: null
+      how_resolved: null
+
+final_results:   # descrivere con una frase per ogni elemento che ritenete di citare
+  what_worked_well:
+    - gradio, openjij
+  what_did_not_work_well:
+    - big data set processing
+  main_benefit_of_using_llm: null
+  main_problem_of_using_llm: documentation aftewords 
+  surprising_findings:
+    - null
+  limitations_of_the_solution:
+    - null
+  threats_to_validity_from_team_perspective:
+    - null
+
+# ============================================================
+# Template report progetto
+# Classificazione binaria con feature reduction QUBO
+# Formato: YAML
+#
+# Compilare tutti i campi applicabili.
+# Usare null quando un dato non è disponibile.
+# Non inserire qui prompt completi o risposte degli LLM:
+# saranno raccolti in un template separato.
+# Utilizzare l'inglese per le risposte testuali
+# ============================================================
+
+schema_version: "1.0"
+
+group_id: "G32"
+repository_url: "https://github.com/simmassimo/isw-qubo-classification-G32.git"
+submission_date: "2026-07-30"
+
+students:
+  - student_id: "60/61/65985"        #Matricola completa
+    role_in_project:
       - "preprocessing"
       - "feature_selection"
       - "classification"
