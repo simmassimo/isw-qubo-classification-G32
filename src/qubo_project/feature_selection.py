@@ -228,7 +228,7 @@ def select_features(
  output_ottim_csv: str, # Name of output optimization data varying alpha
  output_json: str, # Name of output statistics and data file
  target_column: str, # Column name of target
- percTest: float = 0.30, # % of test data with respect to the dataset size
+ percTest: float = 0.20, # % of test data with respect to the dataset size
  percSelected: float = 0.20, # percentage of features to select
  allowance: int = 1, # Allowance of features to select
  seed: int = 42, # Seed for random repeatibility
@@ -249,7 +249,7 @@ def select_features(
         "algorithm": "simulated_annealing",
         "seed": 42,
         "alpha_computations": 6, # a result 
-        "percTest": 0.30, # 30 %
+        "percTest": 0.20, # 20 %
         "training_dataset_size": 14000, # 70% of 20000
         "test_dataset_size": 6000,      # 30% of 20000
         "q_matrix_creation_time": 2.53,
