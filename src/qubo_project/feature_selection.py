@@ -500,6 +500,5 @@ def main():
          args.alpha_computations
         )
 
-#if __name__ == '__main__':  # uncomment these line to get standard behaviour
-#    main()
-main()
+if __name__ == '__main__':  # uncomment these line to get standard behaviour
+    main()

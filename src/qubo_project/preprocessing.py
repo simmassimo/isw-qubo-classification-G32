@@ -324,8 +324,7 @@ def main():
          args.min_perc_valid
         )
 
-#if __name__ == '__main__':  # uncomment these lines to get standard behaviour
-#    main()
-main()    
+if __name__ == '__main__':  # uncomment these lines to get standard behaviour
+    main()   
 
 
