@@ -1,3 +1,4 @@
+import argparse
 import re
 import math
 import json
@@ -452,17 +453,53 @@ def select_features(
     file_out.close()
     write_report(output_json, report)
 
+###########################################################
+
+def main():
+    parser = argparse.ArgumentParser(description='Feature Selection')
     
-select_features(
- 'normalize.csv',
- 'reducedTrain.csv',
- 'reducedTest.csv',
- 'output_ottim.csv',
- 'report2.json',
- 'target',
- 0.3, # percTest
- 0.2, # percSelected
- 1,   # allowance
- 42,  # seed
- 100  # alpha_computations
-)
+    # Positional arguments (required)
+    # Optional argument 
+    parser.add_argument('--in-normalized',        type=str, default='normalized.csv',
+        help='Input normalized.csv file path')
+    parser.add_argument('--out-train',            type=str, default='reducedTrain.csv',
+        help='Output training_reduced.csv file path')
+    parser.add_argument('--out-test',             type=str, default='reducedTest.csv',
+        help='Output test_reduced.csv file path')
+    parser.add_argument('--out-optimizations',    type=str, default='output_ottim_csv',
+        help='Output optimizations.csv file path')
+    parser.add_argument('--out-json',             type=str, default='report2.json',
+        help='Output feature_selection_result.json file path')
+    parser.add_argument('--target',               type=str, default='target',
+        help='Name of target column in input csv file')
+    
+    parser.add_argument('--perc-selected', type=float, default='0.2',
+                        help='Perc-selected expressed a decimal')
+    parser.add_argument('--allowance', type=int, default='1',
+                        help='Allowance expressed an integer')
+    parser.add_argument('--perc-test', type=float, default='0.3',
+                        help='Perc-test expressed a decimal')
+    parser.add_argument('--seed', type=int, default='42',
+                        help='seed expressed an integer')
+    parser.add_argument('--alpha-computations', type=int, default='10',
+                        help='alpha-computations (maxIter) expressed an integer')
+ 
+    args = parser.parse_args()
+ 
+    select_features(
+         args.in_normalized,
+         args.out_train,
+         args.out_test,
+         args.out_optimizations,
+         args.out_json,
+         args.target,
+         args.perc_test,
+         args.perc_selected,
+         args.allowance,
+         args.seed,
+         args.alpha_computations
+        )
+
+#if __name__ == '__main__':  # uncomment this line to get standard behaviour
+#    main()
+main()
